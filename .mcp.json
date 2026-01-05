@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "devcycle-mcp": {
+      "type": "http",
+      "url": "http://localhost:8080/"
+    }
+  }
+}

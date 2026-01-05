@@ -6,6 +6,10 @@ The MCP server will run as a self-contained application inside a Docker containe
 
 For a detailed explanation of the architecture and technical implementation, see the documents in the `MemoryBank/Overview` directory.
 
+## Local Environment Setup
+
+For Docker commands, naming conventions, and troubleshooting, see [MemoryBank/Tools/DevelopmentEnvironment.md](./MemoryBank/Tools/DevelopmentEnvironment.md).
+
 # Development Workflow
 
 The core of this project is the feature development workflow, which is managed by the MCP server. Features are represented as folders containing Markdown files and their state is determined by their location within the `MemoryBank/Features` directory.
