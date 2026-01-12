@@ -410,6 +410,48 @@ async def run_complete_feature(feature_id: str, feature_path: Optional[str] = No
         "message": "Execute the complete-feature procedure. This validates all phases are complete, compiles Lessons Learned (asks user for additional input), creates completion reports, and moves the feature to 04_COMPLETED. REQUIRES USER CONFIRMATION before moving."
     }
 
+async def run_deep_dive(file_path: str) -> dict:
+    """
+    The Recipe for conducting a deep-dive interview about a spec file.
+    Guides the LLM through an intensive interview process to gather comprehensive
+    information about a specification, leaving no stone unturned:
+    1. Read and analyze the spec file
+    2. Identify file type (FeatureDescription, Phase, Overview, etc.)
+    3. Conduct thorough interview using AskUserQuestion tool
+    4. Probe deeply on vague answers
+    5. Read and incorporate referenced documents
+    6. Update the spec file with gathered information
+    """
+    # Load the procedure template
+    try:
+        with open(PROMPTS_DIR / "deep-dive.md", "r", encoding="utf-8") as f:
+            procedure_template = f.read()
+    except FileNotFoundError:
+        return {
+            "status": "error",
+            "message": "deep-dive.md prompt template not found in Prompts directory."
+        }
+
+    # Replace placeholders with actual values
+    procedure = procedure_template.replace("{{file_path}}", file_path or "")
+
+    return {
+        "status": "pending_execution",
+        "action": "execute_procedure",
+        "procedure_name": "deep-dive",
+        "instructions": procedure,
+        "context_folders": [
+            "MemoryBank/Overview/",
+            "MemoryBank/Architecture/",
+            "MemoryBank/CodeGuidelines/",
+            "MemoryBank/Features/"
+        ],
+        "outputs": [
+            f"{file_path} (updated with new sections)"
+        ],
+        "message": "Execute the deep-dive procedure. This conducts an intensive interview about the spec file using AskUserQuestion, probing for comprehensive details on technical implementation, UX, constraints, and tradeoffs. The spec file will be updated with all gathered information."
+    }
+
 # --- JSON-RPC Pydantic Models ---
 class JsonRpcRequest(BaseModel):
     jsonrpc: str = Field(..., pattern=r"^2.0$")
@@ -544,6 +586,17 @@ async def json_rpc_handler(request: JsonRpcRequest):
                         },
                         "required": ["feature_id"]
                     }
+                },
+                {
+                    "name": "deep-dive",
+                    "description": "Conduct an intensive interview about a spec file. Reads the file, interviews the user using AskUserQuestion tool to gather comprehensive details on technical implementation, UX, constraints, tradeoffs, and edge cases. Probes deeply until all ambiguity is resolved. Updates the spec file with gathered information.",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "file_path": {"type": "string", "description": "The path to the spec file to deep-dive into (e.g., MemoryBank/Features/01_SUBMITTED/FEAT-001-feature-name/FeatureDescription.md)"}
+                        },
+                        "required": ["file_path"]
+                    }
                 }
             ]
         })
@@ -597,6 +650,10 @@ async def json_rpc_handler(request: JsonRpcRequest):
                 result = await run_complete_feature(
                     feature_id=tool_args.get("feature_id"),
                     feature_path=tool_args.get("feature_path")
+                )
+            elif tool_name == "deep-dive":
+                result = await run_deep_dive(
+                    file_path=tool_args.get("file_path")
                 )
             else:
                 raise ValueError(f"Unknown tool: {tool_name}")

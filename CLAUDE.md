@@ -86,7 +86,7 @@ The server exposes a single JSON-RPC endpoint at `/` that handles `initialize`, 
 
 ## MCP Commands Reference
 
-The DevCycle MCP Server provides 9 commands that guide features through a complete development lifecycle.
+The DevCycle MCP Server provides 10 commands that guide features through a complete development lifecycle.
 
 ### Feature Lifecycle Overview
 
@@ -429,13 +429,56 @@ LLM: Invokes complete-feature with feature_id="FEAT-001"
 
 ---
 
+### 10. `deep-dive`
+
+**Purpose**: Conduct an intensive interview about a spec file to gather comprehensive details.
+
+**When to Use**: When a spec file (FeatureDescription, Phase, Overview, etc.) needs more detail before proceeding. Use this to fill in gaps, resolve ambiguities, and capture decisions.
+
+**Parameters**:
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `file_path` | Yes | Path to the spec file to deep-dive into |
+
+**What It Does**:
+- Reads the spec file and identifies its type (FeatureDescription, Phase, Overview, etc.)
+- Conducts an intensive interview using `AskUserQuestion` tool
+- Uses context-dependent checklists to ensure comprehensive coverage
+- Probes deeply on vague or incomplete answers
+- Reads and incorporates any referenced documents
+- Appends new sections to the spec file with gathered information
+- Marks uncertain items with `[NEEDS VALIDATION]`
+
+**Coverage by File Type**:
+| File Type | Topics Covered |
+|-----------|---------------|
+| FeatureDescription | Users/personas, requirements, UX flows, error states, technical constraints, tradeoffs, success metrics |
+| Phase | Scope clarity, technical approach, testing strategy, error handling, quality criteria |
+| Overview/Architecture | Component purposes, design decisions, operational concerns, evolution path |
+
+**Interview Style**:
+- **Adaptive questioning**: Starts with batches of 2-3 related questions, switches to one-at-a-time for complex topics
+- **Free-flowing conversation**: Follows threads naturally rather than rigidly following a checklist
+- **Always probes deeper**: Vague answers like "standard approach" are not accepted - asks for specifics
+- **Handles uncertainty**: Helps users think through options, marks uncertain decisions for validation
+
+**Example**:
+```
+User: "I need more details about the password reset feature"
+LLM: Invokes deep-dive with file_path="MemoryBank/Features/01_SUBMITTED/FEAT-001-password-reset/FeatureDescription.md"
+```
+
+---
+
 ## Typical Workflow
 
 ```
 1. init-project          # First time only
 2. submit-feature        # Create new feature
+   └─ deep-dive          # (Optional) Gather comprehensive details
 3. design-feature        # UX research & wireframes
 4. refine-feature        # Break into phases & tasks
+   └─ deep-dive          # (Optional) Clarify any phase details
 5. start-feature         # Validate & create branch
 
 # For each phase:
@@ -450,6 +493,8 @@ LLM: Invokes complete-feature with feature_id="FEAT-001"
 # After all phases:
 9. complete-feature      # Finalize & move to COMPLETED
 ```
+
+**Note**: `deep-dive` can be used at any point when a spec file needs more detail. It's particularly useful after `submit-feature` to flesh out requirements, or after `refine-feature` to clarify phase tasks.
 
 ---
 
