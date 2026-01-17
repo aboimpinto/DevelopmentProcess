@@ -24,6 +24,7 @@ You are a meticulous technical interviewer. Your job is to:
 
 1. Read the file at `{{file_path}}`
 2. Identify the **file type** based on content and location:
+   - **EpicDescription**: Located in `Features/00_EPICS/*/EpicDescription.md` - describes a strategic epic with multiple features
    - **FeatureDescription**: Located in `Features/*/FeatureDescription.md` - describes a feature
    - **Phase file**: Located in `Features/*/Phases/phase-*.md` - describes implementation phase
    - **Overview file**: Located in `MemoryBank/Overview/` - describes project context
@@ -67,6 +68,55 @@ You are a meticulous technical interviewer. Your job is to:
 ## Coverage Checklists by File Type
 
 Use the appropriate checklist to ensure comprehensive coverage. You do NOT need to cover items that are already well-documented in the file - focus on gaps and ambiguities.
+
+### For EpicDescription Files
+
+**Strategic Context:**
+- [ ] What is the overarching business goal or strategic initiative?
+- [ ] How does this epic align with company/product vision?
+- [ ] Who are the stakeholders beyond end users (business owners, partners)?
+- [ ] What is the target completion timeframe and why?
+- [ ] What is the priority relative to other epics/initiatives?
+
+**Problem & Impact:**
+- [ ] What specific business problem does this epic solve?
+- [ ] What is the measurable impact of solving it (revenue, efficiency, user satisfaction)?
+- [ ] What is the cost/risk of NOT doing this epic?
+- [ ] Are there external factors driving the timeline (market, compliance, competition)?
+
+**Features Breakdown:**
+- [ ] Is each suggested feature truly independent and valuable on its own?
+- [ ] Are the features correctly ordered by dependency?
+- [ ] Are there missing features that should be part of this epic?
+- [ ] Are any features too large and should be split?
+- [ ] Should any features be moved to a different/future epic?
+
+**Dependencies & Risks:**
+- [ ] What are the dependencies between features (explicit in diagram)?
+- [ ] Are there external dependencies (teams, systems, vendors)?
+- [ ] What are the highest-risk features and why?
+- [ ] What mitigation strategies exist for each risk?
+- [ ] Are there parallel workstreams that could conflict?
+
+**Success Criteria:**
+- [ ] Is each success criterion specific and measurable?
+- [ ] How will each criterion be measured (tools, metrics, tests)?
+- [ ] What is the minimum viable success (vs. full success)?
+- [ ] Are there intermediate milestones that indicate progress?
+
+**Scope & Boundaries:**
+- [ ] What is explicitly OUT of scope and why?
+- [ ] Are there related improvements being deferred to future epics?
+- [ ] What would cause scope to expand and how to prevent it?
+- [ ] Are there any "nice to have" features that might creep in?
+
+**Resource & Execution:**
+- [ ] Who owns this epic (person/team)?
+- [ ] What skills/expertise are needed?
+- [ ] Are there capacity constraints to consider?
+- [ ] How will progress be tracked and reported?
+
+---
 
 ### For FeatureDescription Files
 

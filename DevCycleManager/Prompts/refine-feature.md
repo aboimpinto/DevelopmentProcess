@@ -726,35 +726,73 @@ Add this section to FeatureDescription.md:
 
 ---
 
+## Step 5.5: Update Parent Epic Status (If Linked)
+
+**Check if the feature has a Parent Epic** by reading the `Parent Epic` field in `FeatureDescription.md`.
+
+**If Parent Epic is NOT "N/A" or "N/A - Standalone Feature":**
+
+1. **Find the epic folder**: `MemoryBank/Features/00_EPICS/{epic_id}-*/`
+
+2. **Read `EpicDescription.md`**
+
+3. **Update Features Breakdown table** - Change status to `READY`:
+   ```
+   | FEAT-XXX | Title | READY | ... | ... |
+   ```
+
+4. **Update Progress Tracking table** - Change status icon:
+   ```
+   | FEAT-XXX | 📝 READY | - | - | Refined, ready to start |
+   ```
+
+5. **Update Epic Progress section**:
+   - Recalculate counts in the status table
+   - Move feature to 📝 Ready row
+
+6. **Update Dependency Flow Diagram**:
+   - Change node label: `FEAT-XXX[📝 FEAT-XXX: Title]`
+   - Change class: `class FEAT-XXX ready`
+
+**If feature has no Parent Epic:** Skip this step.
+
+---
+
 ## Step 6: Confirm Completion
 
-After all steps are complete, provide this summary:
+After all steps are complete (including epic update if applicable), provide this summary:
 
 ```
-✅ Feature Refinement Complete for {{feature_id}}
+Feature Refinement Complete for {{feature_id}}
 
-📁 Feature Location: MemoryBank/Features/02_READY_TO_DEVELOP/[feature-folder]/
+Feature Location: MemoryBank/Features/02_READY_TO_DEVELOP/[feature-folder]/
 
-📄 Documents Created:
-   • FeatureTasks.md - Task summary with phase links
-   • Phases/phase-0-health-check.md
-   • Phases/phase-1-planning-analysis.md
-   • Phases/phase-2-data-layer.md
-   • Phases/phase-3-business-logic.md
-   • Phases/phase-4-presentation-logic.md
-   • Phases/phase-5-user-interface.md
-   • Phases/phase-6-integration.md
-   • Phases/phase-7-testing-polish.md
-   • Phases/phase-8-final-checkpoint.md
+Documents Created:
+   - FeatureTasks.md - Task summary with phase links
+   - Phases/phase-0-health-check.md
+   - Phases/phase-1-planning-analysis.md
+   - Phases/phase-2-data-layer.md
+   - Phases/phase-3-business-logic.md
+   - Phases/phase-4-presentation-logic.md
+   - Phases/phase-5-user-interface.md
+   - Phases/phase-6-integration.md
+   - Phases/phase-7-testing-polish.md
+   - Phases/phase-8-final-checkpoint.md
 
-📊 Time Estimates:
-   • Total Man/Hour: [X]h
-   • Total AI/Hour: [Y]h
-   • Total Combined: [Z]h
+Time Estimates:
+   - Total Man/Hour: [X]h
+   - Total AI/Hour: [Y]h
+   - Total Combined: [Z]h
 
-📋 Next Steps:
+[If linked to epic]
+Epic Updated: [EPIC-XXX]
+   - Status changed to: READY (📝)
+   - Progress Tracking updated
+   - Dependency Diagram updated
+
+Next Steps:
    1. Review the phase breakdown
-   2. Start with Phase 0 (Health Check)
+   2. Run `start-feature` to begin implementation
    3. Complete each phase before moving to the next
    4. Update actual times as work progresses
 ```

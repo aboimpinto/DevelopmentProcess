@@ -52,7 +52,44 @@ async def run_init_project() -> dict:
         "message": instructions
     }
 
-async def run_submit_feature(description: str, title: Optional[str] = None, external_id: Optional[str] = None) -> dict:
+async def run_submit_epic(description: str, title: Optional[str] = None, external_id: Optional[str] = None) -> dict:
+    """
+    The Recipe for submitting an epic.
+    Returns the step-by-step procedure prompt for the Client's LLM to execute.
+    """
+    # Load the procedure template
+    try:
+        with open(PROMPTS_DIR / "submit-epic.md", "r", encoding="utf-8") as f:
+            procedure_template = f.read()
+    except FileNotFoundError:
+        return {
+            "status": "error",
+            "message": "submit-epic.md prompt template not found in Prompts directory."
+        }
+
+    # Replace placeholders with actual values
+    procedure = procedure_template.replace("{{description}}", description or "")
+    procedure = procedure.replace("{{title}}", title or "[Not provided - LLM should generate]")
+    procedure = procedure.replace("{{external_id}}", external_id or "[Not provided]")
+
+    return {
+        "status": "pending_execution",
+        "action": "execute_procedure",
+        "procedure_name": "submit-epic",
+        "instructions": procedure,
+        "context_folders": [
+            "MemoryBank/Overview/",
+            "MemoryBank/Architecture/",
+            "MemoryBank/Features/00_EPICS/",
+            "MemoryBank/Features/"
+        ],
+        "context_files": [
+            "MemoryBank/Features/00_EPICS/NEXT_EPIC_ID.txt"
+        ],
+        "message": "Execute the submit-epic procedure. IMPORTANT: Start with Step 0 to read the project context before generating the epic description."
+    }
+
+async def run_submit_feature(description: str, title: Optional[str] = None, external_id: Optional[str] = None, epic_id: Optional[str] = None) -> dict:
     """
     The Recipe for submitting a feature.
     Returns the step-by-step procedure prompt for the Client's LLM to execute.
@@ -69,8 +106,9 @@ async def run_submit_feature(description: str, title: Optional[str] = None, exte
 
     # Replace placeholders with actual values
     procedure = procedure_template.replace("{{description}}", description or "")
-    procedure = procedure.replace("{{title}}", title or "[Not provided - LLM should generate]")
+    procedure = procedure_template.replace("{{title}}", title or "[Not provided - LLM should generate]")
     procedure = procedure.replace("{{external_id}}", external_id or "[Not provided]")
+    procedure = procedure.replace("{{epic_id}}", epic_id or "[Not provided - standalone feature]")
 
     return {
         "status": "pending_execution",
@@ -81,12 +119,85 @@ async def run_submit_feature(description: str, title: Optional[str] = None, exte
             "MemoryBank/Overview/",
             "MemoryBank/Architecture/",
             "MemoryBank/CodeGuidelines/",
-            "MemoryBank/Features/"
+            "MemoryBank/Features/",
+            "MemoryBank/Features/00_EPICS/"
         ],
         "context_files": [
             "MemoryBank/Features/NEXT_FEATURE_ID.txt"
         ],
         "message": "Execute the submit-feature procedure. IMPORTANT: Start with Step 0 to read the project context before generating the feature description."
+    }
+
+async def run_create_epic_features(epic_id: str, epic_path: Optional[str] = None) -> dict:
+    """
+    The Recipe for batch-creating all features defined in an epic.
+    Creates features from the epic's Features Breakdown table (TBD entries).
+    """
+    # Load the procedure template
+    try:
+        with open(PROMPTS_DIR / "create-epic-features.md", "r", encoding="utf-8") as f:
+            procedure_template = f.read()
+    except FileNotFoundError:
+        return {
+            "status": "error",
+            "message": "create-epic-features.md prompt template not found in Prompts directory."
+        }
+
+    # Replace placeholders with actual values
+    procedure = procedure_template.replace("{{epic_id}}", epic_id or "")
+    procedure = procedure.replace("{{epic_path}}", epic_path or "[Not provided - search in MemoryBank/Features/00_EPICS/]")
+
+    return {
+        "status": "pending_execution",
+        "action": "execute_procedure",
+        "procedure_name": "create-epic-features",
+        "instructions": procedure,
+        "context_folders": [
+            "MemoryBank/Features/00_EPICS/",
+            "MemoryBank/Features/01_SUBMITTED/",
+            "MemoryBank/Overview/",
+            "MemoryBank/Architecture/"
+        ],
+        "context_files": [
+            "MemoryBank/Features/NEXT_FEATURE_ID.txt"
+        ],
+        "message": "Execute the create-epic-features procedure. This will batch-create all TBD features from the epic's Features Breakdown table. User confirmation is required before creating."
+    }
+
+async def run_link_feature_to_epic(feature_id: str, epic_id: str, feature_path: Optional[str] = None, epic_path: Optional[str] = None) -> dict:
+    """
+    The Recipe for linking an existing feature to an epic.
+    Updates both the feature and epic documents to establish the relationship.
+    """
+    # Load the procedure template
+    try:
+        with open(PROMPTS_DIR / "link-feature-to-epic.md", "r", encoding="utf-8") as f:
+            procedure_template = f.read()
+    except FileNotFoundError:
+        return {
+            "status": "error",
+            "message": "link-feature-to-epic.md prompt template not found in Prompts directory."
+        }
+
+    # Replace placeholders with actual values
+    procedure = procedure_template.replace("{{feature_id}}", feature_id or "")
+    procedure = procedure.replace("{{epic_id}}", epic_id or "")
+    procedure = procedure.replace("{{feature_path}}", feature_path or "[Not provided - search in all feature folders]")
+    procedure = procedure.replace("{{epic_path}}", epic_path or "[Not provided - search in MemoryBank/Features/00_EPICS/]")
+
+    return {
+        "status": "pending_execution",
+        "action": "execute_procedure",
+        "procedure_name": "link-feature-to-epic",
+        "instructions": procedure,
+        "context_folders": [
+            "MemoryBank/Features/00_EPICS/",
+            "MemoryBank/Features/01_SUBMITTED/",
+            "MemoryBank/Features/02_READY_TO_DEVELOP/",
+            "MemoryBank/Features/03_IN_PROGRESS/",
+            "MemoryBank/Features/04_COMPLETED/"
+        ],
+        "message": "Execute the link-feature-to-epic procedure. This links an existing feature to an epic, updating both documents to maintain the relationship."
     }
 
 async def run_design_feature(feature_id: str, feature_path: Optional[str] = None) -> dict:
@@ -489,6 +600,19 @@ async def json_rpc_handler(request: JsonRpcRequest):
                     "inputSchema": {"type": "object", "properties": {}}
                 },
                 {
+                    "name": "submit-epic",
+                    "description": "Submit a new epic (large body of work containing multiple features). Returns a step-by-step procedure that creates an epic in 00_EPICS with EpicDescription.md. Use deep-dive afterward to refine details.",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "description": {"type": "string", "description": "The epic description from the user - what strategic goal or major capability is being built"},
+                            "title": {"type": "string", "description": "Optional: A title for the epic. If not provided, LLM will generate one."},
+                            "external_id": {"type": "string", "description": "Optional: External reference ID (e.g., initiative ID, roadmap item)"}
+                        },
+                        "required": ["description"]
+                    }
+                },
+                {
                     "name": "submit-feature",
                     "description": "Submit a new feature idea. Returns a step-by-step procedure for the LLM to execute.",
                     "inputSchema": {
@@ -496,9 +620,36 @@ async def json_rpc_handler(request: JsonRpcRequest):
                         "properties": {
                             "description": {"type": "string", "description": "The feature description from the user"},
                             "title": {"type": "string", "description": "Optional: A title for the feature. If not provided, LLM will generate one."},
-                            "external_id": {"type": "string", "description": "Optional: External reference ID (e.g., ticket number, user story ID)"}
+                            "external_id": {"type": "string", "description": "Optional: External reference ID (e.g., ticket number, user story ID)"},
+                            "epic_id": {"type": "string", "description": "Optional: Parent epic ID (e.g., EPIC-001) to link this feature to an epic"}
                         },
                         "required": ["description"]
+                    }
+                },
+                {
+                    "name": "create-epic-features",
+                    "description": "Batch-create all features defined in an epic's Features Breakdown table. Creates features with TBD IDs and updates the epic with actual FEAT-XXX IDs. Requires user confirmation.",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "epic_id": {"type": "string", "description": "The epic ID (e.g., EPIC-001) containing the features to create"},
+                            "epic_path": {"type": "string", "description": "Optional: Direct path to the epic folder if known"}
+                        },
+                        "required": ["epic_id"]
+                    }
+                },
+                {
+                    "name": "link-feature-to-epic",
+                    "description": "Link an existing feature to an epic. Updates both the feature's Parent Epic field and the epic's Features Breakdown, Progress Tracking, and Dependency Diagram.",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "feature_id": {"type": "string", "description": "The feature ID (e.g., FEAT-001) to link"},
+                            "epic_id": {"type": "string", "description": "The epic ID (e.g., EPIC-001) to link the feature to"},
+                            "feature_path": {"type": "string", "description": "Optional: Direct path to the feature folder if known"},
+                            "epic_path": {"type": "string", "description": "Optional: Direct path to the epic folder if known"}
+                        },
+                        "required": ["feature_id", "epic_id"]
                     }
                 },
                 {
@@ -608,11 +759,30 @@ async def json_rpc_handler(request: JsonRpcRequest):
         try:
             if tool_name == "init-project":
                 result = await run_init_project()
+            elif tool_name == "submit-epic":
+                result = await run_submit_epic(
+                    description=tool_args.get("description"),
+                    title=tool_args.get("title"),
+                    external_id=tool_args.get("external_id")
+                )
             elif tool_name == "submit-feature":
                 result = await run_submit_feature(
                     description=tool_args.get("description"),
                     title=tool_args.get("title"),
-                    external_id=tool_args.get("external_id")
+                    external_id=tool_args.get("external_id"),
+                    epic_id=tool_args.get("epic_id")
+                )
+            elif tool_name == "create-epic-features":
+                result = await run_create_epic_features(
+                    epic_id=tool_args.get("epic_id"),
+                    epic_path=tool_args.get("epic_path")
+                )
+            elif tool_name == "link-feature-to-epic":
+                result = await run_link_feature_to_epic(
+                    feature_id=tool_args.get("feature_id"),
+                    epic_id=tool_args.get("epic_id"),
+                    feature_path=tool_args.get("feature_path"),
+                    epic_path=tool_args.get("epic_path")
                 )
             elif tool_name == "design-feature":
                 result = await run_design_feature(

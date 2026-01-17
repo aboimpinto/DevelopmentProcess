@@ -390,25 +390,62 @@ Save to the feature folder with this structure:
 
 ---
 
-## Step Final: Confirm Completion
+## Step Final: Update Parent Epic Status (If Linked)
 
-After all three documents are created, provide this summary:
+**Check if the feature has a Parent Epic** by reading the `Parent Epic` field in `FeatureDescription.md`.
+
+**If Parent Epic is NOT "N/A" or "N/A - Standalone Feature":**
+
+1. **Find the epic folder**: `MemoryBank/Features/00_EPICS/{epic_id}-*/`
+
+2. **Read `EpicDescription.md`**
+
+3. **Update Features Breakdown table** - Change status to `DESIGNED`:
+   ```
+   | FEAT-XXX | Title | DESIGNED | ... | ... |
+   ```
+
+4. **Update Progress Tracking table** - Change status icon:
+   ```
+   | FEAT-XXX | 📐 DESIGNED | - | - | Design complete |
+   ```
+
+5. **Update Epic Progress section**:
+   - Recalculate counts in the status table
+   - Move feature from 📋 Submitted row to 📐 Designed row
+
+6. **Update Dependency Flow Diagram**:
+   - Change node label: `FEAT-XXX[📐 FEAT-XXX: Title]`
+   - Change class: `class FEAT-XXX designed`
+
+**If feature has no Parent Epic:** Skip this step.
+
+---
+
+## Step Confirm: Report Completion
+
+After all documents are created (and epic updated if applicable), provide this summary:
 
 ```
-✅ Design Documentation Generated for {{feature_id}}
+Design Documentation Generated for {{feature_id}}
 
-📁 Feature folder: [path to feature folder]
+Feature folder: [path to feature folder]
 
-📄 Documents created:
-   • UX-research-report.md - User research and personas
-   • Wireframes-design.md - Visual specifications
-   • design-summary.md - Consolidated design documentation
+Documents created:
+   - UX-research-report.md - User research and personas
+   - Wireframes-design.md - Visual specifications
+   - design-summary.md - Consolidated design documentation
 
-📋 Next Steps:
+[If linked to epic]
+Epic Updated: [EPIC-XXX]
+   - Status changed to: DESIGNED (📐)
+   - Progress Tracking updated
+   - Dependency Diagram updated
+
+Next Steps:
    1. Review the design documents with stakeholders
    2. Address any open questions in the design summary
-   3. Move feature to 02_READY_TO_DEVELOP (if in 01_SUBMITTED)
-   4. Create implementation tasks from the design summary
+   3. Run `refine-feature` to create implementation tasks
 ```
 
 ---

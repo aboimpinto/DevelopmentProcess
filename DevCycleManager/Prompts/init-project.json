@@ -1,5 +1,6 @@
 {
     "directories": [
+        "MemoryBank/Features/00_EPICS",
         "MemoryBank/Features/01_SUBMITTED",
         "MemoryBank/Features/02_READY_TO_DEVELOP",
         "MemoryBank/Features/03_IN_PROGRESS",

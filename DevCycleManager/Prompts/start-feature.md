@@ -546,6 +546,42 @@ TO:   MemoryBank/Features/03_IN_PROGRESS/[feature-folder]/
 
 ---
 
+## Step 5.5: Update Parent Epic Status (If Linked)
+
+**Check if the feature has a Parent Epic** by reading the `Parent Epic` field in `FeatureDescription.md`.
+
+**If Parent Epic is NOT "N/A" or "N/A - Standalone Feature":**
+
+1. **Find the epic folder**: `MemoryBank/Features/00_EPICS/{epic_id}-*/`
+
+2. **Read `EpicDescription.md`**
+
+3. **Update Features Breakdown table** - Change status to `IN_PROGRESS`:
+   ```
+   | FEAT-XXX | Title | IN_PROGRESS | ... | ... |
+   ```
+
+4. **Update Progress Tracking table** - Change status and set Started date:
+   ```
+   | FEAT-XXX | 🔨 IN_PROGRESS | [Today's date] | - | Implementation started |
+   ```
+
+5. **Update Epic Progress section**:
+   - Recalculate counts in the status table
+   - Move feature to 🔨 In Progress row
+   - Recalculate progress bar
+
+6. **Update Dependency Flow Diagram**:
+   - Change node label: `FEAT-XXX[🔨 FEAT-XXX: Title]`
+   - Change class: `class FEAT-XXX inProgress`
+
+7. **Update Epic Status** (if not already IN_PROGRESS):
+   - Change `Status` field in metadata to `IN_PROGRESS`
+
+**If feature has no Parent Epic:** Skip this step.
+
+---
+
 ## Step 6: Generate Success Report
 
 Create the final report:
@@ -610,6 +646,18 @@ MemoryBank/Features/03_IN_PROGRESS/[feature-folder]/
     ├── phase-7-testing-polish.md
     └── phase-8-final-checkpoint.md
 ```
+
+---
+
+## Epic Status (If Linked)
+
+| Field | Value |
+|-------|-------|
+| **Parent Epic** | [EPIC-XXX or "N/A"] |
+| **Epic Status** | [IN_PROGRESS or "N/A"] |
+| **Epic Progress** | [X/Y features complete] |
+
+**Diagram Updated**: [Yes/No/N/A]
 
 ---
 

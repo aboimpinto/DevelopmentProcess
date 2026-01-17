@@ -688,6 +688,45 @@ git push origin {branch}
 
 ---
 
+## Step 8.5: Update Parent Epic Status (If Linked)
+
+**Check if the feature has a Parent Epic** by reading the `Parent Epic` field in `FeatureDescription.md`.
+
+**If Parent Epic is NOT "N/A" or "N/A - Standalone Feature":**
+
+1. **Find the epic folder**: `MemoryBank/Features/00_EPICS/{epic_id}-*/`
+
+2. **Read `EpicDescription.md`**
+
+3. **Update Features Breakdown table** - Change status to `COMPLETED`:
+   ```
+   | FEAT-XXX | Title | COMPLETED | ... | ... |
+   ```
+
+4. **Update Progress Tracking table** - Change status and set Completed date:
+   ```
+   | FEAT-XXX | ✅ COMPLETED | [Started date] | [Today's date] | Feature complete |
+   ```
+
+5. **Update Epic Progress section**:
+   - Recalculate counts in the status table
+   - Move feature to ✅ Completed row
+   - Recalculate progress bar: `(completed / total) * 16` full blocks
+   - Update percentage
+
+6. **Update Dependency Flow Diagram**:
+   - Change node label: `FEAT-XXX[✅ FEAT-XXX: Title]`
+   - Change class: `class FEAT-XXX completed`
+
+7. **Check if Epic is Complete**:
+   - If ALL features in the epic are now COMPLETED:
+     - Change Epic `Status` field to `COMPLETED`
+     - Add completion date to Epic metadata
+
+**If feature has no Parent Epic:** Skip this step.
+
+---
+
 ## Step 9: Final Completion Report
 
 Present final report to user:
@@ -745,10 +784,23 @@ Present final report to user:
 
 ---
 
+## Epic Status (If Linked)
+
+| Field | Value |
+|-------|-------|
+| **Parent Epic** | [EPIC-XXX or "N/A"] |
+| **Epic Status** | [IN_PROGRESS / COMPLETED or "N/A"] |
+| **Epic Progress** | [X/Y features complete (Z%)] |
+| **Diagram Updated** | [Yes / N/A] |
+
+---
+
 ## Next Steps
 
 - [ ] Close external ticket/story (if applicable)
 - [ ] Update project documentation if needed
+- [ ] [If epic has remaining features] Continue with next feature in epic
+- [ ] [If epic complete] Review and close epic
 - [ ] Select next feature from `02_READY_TO_DEVELOP/`
 - [ ] Review Lessons Learned for future features
 

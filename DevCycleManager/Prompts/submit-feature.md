@@ -6,6 +6,7 @@ You are executing the **Submit Feature** procedure for the DevCycleManager. Foll
 - **User Description**: {{description}}
 - **Title** (optional): {{title}}
 - **External ID** (optional): {{external_id}}
+- **Parent Epic** (optional): {{epic_id}}
 
 ---
 
@@ -38,6 +39,27 @@ Before generating any content, you MUST read and understand the project context.
 - Identify which existing components it might interact with
 - Ensure the feature aligns with established patterns and guidelines
 - Avoid proposing something that duplicates existing functionality
+
+---
+
+## Step 0.5: Validate Parent Epic (If Provided)
+
+**If a Parent Epic ID was provided:**
+
+1. Search for the epic folder in `MemoryBank/Features/00_EPICS/`
+   - Look for a folder starting with the epic ID (e.g., `EPIC-001-*`)
+
+2. **If the epic folder EXISTS:**
+   - Read the `EpicDescription.md` file
+   - Verify the epic is not in CANCELLED status
+   - Note the epic's strategic goal to ensure this feature aligns
+   - This feature will be listed in the epic's Features Breakdown table
+
+3. **If the epic folder DOES NOT EXIST:**
+   - Report an error: "Parent epic {epic_id} not found. Please create the epic first using submit-epic or remove the epic_id parameter."
+   - STOP the procedure - do not create the feature
+
+**If NO Parent Epic was provided:** Continue to Step 1 (standalone feature).
 
 ---
 
@@ -100,6 +122,7 @@ Create `FeatureDescription.md` with the following structure:
 | Field | Value |
 |-------|-------|
 | **Feature ID** | FEAT-XXX |
+| **Parent Epic** | [Epic ID if provided, otherwise "N/A - Standalone Feature"] |
 | **External Reference** | [External ID if provided, otherwise "N/A"] |
 | **Date Submitted** | [Today's date: YYYY-MM-DD] |
 | **Status** | 01_SUBMITTED |
@@ -170,22 +193,106 @@ Execute these actions in order:
 
 ---
 
+## Step 5.5: Update Parent Epic (If Linked)
+
+**If this feature is linked to an epic (`epic_id` was provided):**
+
+You MUST update the epic's `EpicDescription.md` to maintain the Epic-Feature relationship.
+
+### 5.5.1: Update Features Breakdown Table
+
+Find the `## Features Breakdown` section and update the table:
+
+**If there's a TBD row that matches this feature's description:**
+- Replace the TBD row with the actual feature data
+
+**If no matching TBD row exists:**
+- Add a new row to the table
+
+Table row format:
+```markdown
+| FEAT-XXX | [Feature Title] | NOT_STARTED | [Dependencies or "None"] | [P1/P2/P3] |
+```
+
+### 5.5.2: Update Progress Tracking Table
+
+Find the `## Progress Tracking` section and update:
+
+**If there's a TBD row:**
+- Replace it with the actual feature data
+
+**If no TBD row exists:**
+- Add a new row
+
+Table row format:
+```markdown
+| FEAT-XXX | NOT_STARTED | - | - | [Notes if any] |
+```
+
+Also update the **Overall Progress** line:
+- Count total features and completed features
+- Update: `**Overall Progress:** X/Y features complete (Z%)`
+
+### 5.5.3: Update Feature Details Section
+
+Find the `## Feature Details` section:
+
+**If there's a placeholder section for this feature:**
+- Replace the placeholder title with: `### FEAT-XXX: [Feature Title]`
+- Update the User Story, Scope, and Dependencies based on the FeatureDescription.md
+
+**If no placeholder exists:**
+- Add a new feature details subsection:
+
+```markdown
+### FEAT-XXX: [Feature Title]
+**User Story:** [From FeatureDescription.md Summary - convert to "As a [user], I want [X] so that [Y]" format]
+
+**Scope:**
+- [Key items from Requirements]
+
+**Dependencies:** [From FeatureDescription.md Dependencies, or "None"]
+```
+
+### 5.5.4: Update Dependency Flow Diagram (If Applicable)
+
+Find the Mermaid diagram in `## Dependency Flow Diagram`:
+
+**If there are placeholder nodes (F1, F2, etc.):**
+- Replace with actual FEAT-XXX identifiers
+- Update node labels with feature titles
+
+**If adding a new feature:**
+- Add a new node: `FEAT-XXX[FEAT-XXX: Feature Title]`
+- Add dependency arrows if this feature depends on others
+- Update the class assignment: `class FEAT-XXX notStarted`
+
+---
+
 ## Step 6: Confirm Submission
 
 After completing all steps, provide a summary:
 
 ```
-✅ Feature Submitted Successfully
+Feature Submitted Successfully
 
 - Feature ID: FEAT-XXX
 - Title: [Feature Title]
+- Parent Epic: [Epic ID or "None - Standalone Feature"]
 - External Reference: [ID or "None"]
 - Location: MemoryBank/Features/01_SUBMITTED/[folder-name]/
-- Files Created:
-  - FeatureDescription.md
+- Files Created/Updated:
+  - FeatureDescription.md (created)
   - NEXT_FEATURE_ID.txt updated to [next number]
+  - [If linked to epic] EpicDescription.md updated:
+    - Features Breakdown table: Added FEAT-XXX
+    - Progress Tracking table: Added FEAT-XXX
+    - Feature Details section: Added/updated
+    - Dependency Flow Diagram: Updated (if applicable)
 
-📋 Next Step: Review the feature and move to 02_READY_TO_DEVELOP when ready for design and planning.
+Next Steps:
+1. Review the feature and run `deep-dive` to gather more details if needed
+2. Move to design-feature when ready for UX research and wireframes
 ```
 
 ---
