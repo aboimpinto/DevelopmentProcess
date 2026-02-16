@@ -1,8 +1,17 @@
-# Link Feature to Epic - MCP Procedure
+# Link Feature to Epic
 
-You are executing the **Link Feature to Epic** procedure for the DevCycleManager. This links an existing feature to an epic, establishing the parent-child relationship.
+<!--
+name: link-feature-to-epic
+purpose: Establish bidirectional parent-child link between a feature and an epic
+tools: Read, Write, Glob, AskUserQuestion
+triggers: Standalone feature should belong to an epic, or feature moves between epics
+inputs: feature_id, epic_id, feature_path (optional), epic_path (optional)
+outputs: Updated FeatureDescription.md and EpicDescription.md (both directions)
+related: submit-feature, submit-epic, create-epic-features, epic-status-update
+-->
 
-## Input Provided
+## Inputs
+
 - **Feature ID**: {{feature_id}}
 - **Epic ID**: {{epic_id}}
 - **Feature Path** (optional): {{feature_path}}
@@ -10,101 +19,98 @@ You are executing the **Link Feature to Epic** procedure for the DevCycleManager
 
 ---
 
-## Step 0: Locate Both Documents
+## Persona
 
-### 0.1: Find the Feature
+You are a **Relationship Manager** — precise, consistency-obsessed, and bidirectional. You never update one side of a link without updating the other.
 
-1. **If `feature_path` is provided:** Use it directly
-2. **Otherwise:** Search in all feature state folders:
-   - `MemoryBank/Features/01_SUBMITTED/`
-   - `MemoryBank/Features/02_READY_TO_DEVELOP/`
-   - `MemoryBank/Features/03_IN_PROGRESS/`
-   - `MemoryBank/Features/04_COMPLETED/`
-
-3. **Look for folder starting with `{{feature_id}}`**
-
-4. **Read `FeatureDescription.md`**
-
-**If feature not found:** Report error "Feature {{feature_id}} not found" and STOP.
-
-### 0.2: Find the Epic
-
-1. **If `epic_path` is provided:** Use it directly
-2. **Otherwise:** Search in `MemoryBank/Features/00_EPICS/` for folder starting with `{{epic_id}}`
-
-3. **Read `EpicDescription.md`**
-
-**If epic not found:** Report error "Epic {{epic_id}} not found" and STOP.
+**Core beliefs:**
+- **Bidirectional or broken**: Both feature AND epic must reflect the link, always
+- **Clean re-links**: Moving a feature between epics means cleaning up the old one completely
+- **No duplicates**: If the link already exists, say so and stop
+- **Status preservation**: The feature's current state carries over accurately to the epic
 
 ---
 
-## Step 1: Validate the Link
+## Completion Checklist
 
-### 1.1: Check Feature's Current Epic
-
-Read the feature's `Parent Epic` field:
-
-**If already linked to an epic:**
-- If same epic: Report "Feature {{feature_id}} is already linked to {{epic_id}}" and STOP
-- If different epic: Ask user to confirm re-linking
-
-```
-Feature {{feature_id}} is currently linked to [EXISTING_EPIC_ID].
-
-Do you want to:
-1. Move to {{epic_id}} (will update both epics)
-2. Cancel
-```
-
-### 1.2: Check Epic Status
-
-- Epic must NOT be in CANCELLED status
-- If CANCELLED: Report error and STOP
-
-### 1.3: Check for Duplicates
-
-- Verify the feature is not already in the epic's Features Breakdown table
-- If duplicate found: Report and STOP
+This procedure is DONE when:
+- [ ] Feature and epic both located and read
+- [ ] Validation passed (no duplicate, not cancelled, user confirmed re-link if applicable)
+- [ ] Feature's `FeatureDescription.md` updated (Parent Epic, Epic Context)
+- [ ] Epic's `EpicDescription.md` updated (Breakdown, Progress, Details, Diagram)
+- [ ] Previous epic cleaned up (if re-linking)
+- [ ] Completion summary presented
 
 ---
 
-## Step 2: Extract Feature Information
+## Phase 1: Locate Both Documents
 
-From the feature's `FeatureDescription.md`, extract:
+### 1.1 Find the Feature
+
+- If `feature_path` provided, use it directly
+- Otherwise search all state folders: `01_SUBMITTED/`, `02_READY_TO_DEVELOP/`, `03_IN_PROGRESS/`, `04_COMPLETED/`
+- Look for folder starting with `{{feature_id}}`
+- Read `FeatureDescription.md`
+
+**If not found:** Report "Feature {{feature_id}} not found" with search locations tried, and STOP.
+
+### 1.2 Find the Epic
+
+- If `epic_path` provided, use it directly
+- Otherwise search `MemoryBank/Features/00_EPICS/` for folder starting with `{{epic_id}}`
+- Read `EpicDescription.md`
+
+**If not found:** Report "Epic {{epic_id}} not found" and STOP.
+
+---
+
+## Phase 2: Validate the Link
+
+| Check | Condition | Action |
+|-------|-----------|--------|
+| Already linked to same epic | Feature's Parent Epic = `{{epic_id}}` | Report "already linked" and STOP |
+| Already linked to different epic | Feature has existing Parent Epic | Ask user: "Move to {{epic_id}}?" or "Cancel" |
+| Epic is CANCELLED | Epic status = CANCELLED | Report error and STOP |
+| Duplicate in epic table | Feature already in Features Breakdown | Report and STOP |
+
+---
+
+## Phase 3: Extract Feature Information
+
+From `FeatureDescription.md`, extract:
 
 | Field | Source |
 |-------|--------|
 | Feature ID | Metadata table |
 | Title | Document title (after "# Feature:") |
-| Status | Convert state folder to status (e.g., 01_SUBMITTED → NOT_STARTED) |
+| Status | Map from state folder (see below) |
 | Summary | Summary section |
-| Requirements | Requirements section (key items) |
+| Key Requirements | Requirements section |
 | Dependencies | Dependencies subsection |
 | Priority | Priority field |
 
-**Status Mapping:**
-- `01_SUBMITTED` → `NOT_STARTED`
-- `02_READY_TO_DEVELOP` → `NOT_STARTED`
-- `03_IN_PROGRESS` → `IN_PROGRESS`
-- `04_COMPLETED` → `COMPLETED`
+**Status mapping:**
+
+| State Folder | Status |
+|-------------|--------|
+| `01_SUBMITTED` | NOT_STARTED |
+| `02_READY_TO_DEVELOP` | NOT_STARTED |
+| `03_IN_PROGRESS` | IN_PROGRESS |
+| `04_COMPLETED` | COMPLETED |
 
 ---
 
-## Step 3: Update Feature Document
+## Phase 4: Update Feature Document
 
-Edit the feature's `FeatureDescription.md`:
+Edit `FeatureDescription.md`:
 
-### 3.1: Update Parent Epic Field
-
-Find the metadata table and update:
+### 4.1 Update Parent Epic Field
 
 ```markdown
 | **Parent Epic** | {{epic_id}} |
 ```
 
-### 3.2: Add Epic Context (If Not Present)
-
-If not already present, add a section after the metadata:
+### 4.2 Add Epic Context (if not present)
 
 ```markdown
 ## Epic Context
@@ -116,93 +122,57 @@ This feature is part of **{{epic_id}}: [Epic Title]**.
 
 ---
 
-## Step 4: Update Epic Document
+## Phase 5: Update Epic Document
 
-Edit the epic's `EpicDescription.md`:
+Edit `EpicDescription.md`:
 
-### 4.1: Update Features Breakdown Table
+### 5.1 Features Breakdown Table
 
-Find `## Features Breakdown` and add a new row:
-
+Add row in logical order (by dependencies, then same-priority grouping):
 ```markdown
 | {{feature_id}} | [Feature Title] | [Status] | [Dependencies] | [Priority] |
 ```
 
-**Placement:**
-- Add in logical order based on dependencies
-- If no dependencies, add at the end of same-priority features
+### 5.2 Progress Tracking Table
 
-### 4.2: Update Progress Tracking Table
-
-Find `## Progress Tracking` and add a new row:
-
+Add row and recalculate overall progress:
 ```markdown
 | {{feature_id}} | [Status] | [Started Date or -] | [Completed Date or -] | Linked from existing feature |
 ```
 
-**Update Overall Progress:**
-- Recalculate: `**Overall Progress:** X/Y features complete (Z%)`
+Update: `**Overall Progress:** X/Y features complete (Z%)`
 
-### 4.3: Add Feature Details Section
+### 5.3 Feature Details Section
 
-Find `## Feature Details` and add:
-
+Add subsection:
 ```markdown
 ### {{feature_id}}: [Feature Title]
-**User Story:** [Convert Summary to user story format: "As a [user], I want [X] so that [Y]"]
-
-**Scope:**
-- [Key requirement 1]
-- [Key requirement 2]
-- [Key requirement 3]
-
-**Dependencies:** [From feature's Dependencies, or "None"]
-
+**User Story:** As a [user], I want [X] so that [Y]
+**Scope:** [Key requirements]
+**Dependencies:** [From feature, or "None"]
 **Note:** Linked from existing feature. See full details in feature folder.
 ```
 
-### 4.4: Update Dependency Flow Diagram
+### 5.4 Dependency Flow Diagram
 
-Find the Mermaid diagram and:
-
-1. **Add a new node:**
-   ```
-   {{feature_id}}[{{feature_id}}: Feature Title]
-   ```
-
-2. **Add dependency arrows** (if feature has dependencies on other features in this epic)
-
-3. **Add the status class:**
-   ```
-   class {{feature_id}} [notStarted|inProgress|completed]
-   ```
+1. Add node: `{{feature_id}}[{icon} {{feature_id}}: Feature Title]`
+2. Add dependency arrows (for features in this epic)
+3. Add class: `class {{feature_id}} [notStarted|inProgress|completed]`
 
 ---
 
-## Step 5: Handle Previous Epic (If Re-linking)
+## Phase 6: Clean Up Previous Epic (If Re-linking)
 
-**If the feature was previously linked to a different epic:**
+If the feature was previously linked to a different epic:
 
-1. **Read the previous epic's `EpicDescription.md`**
-
-2. **Remove feature from:**
-   - Features Breakdown table (remove the row)
-   - Progress Tracking table (remove the row)
-   - Feature Details section (remove the subsection)
-   - Dependency Flow Diagram (remove node and update arrows)
-
-3. **Update Overall Progress** in the previous epic
-
-4. **Add note to previous epic:**
-   ```markdown
-   > **Note:** {{feature_id}} was moved to {{epic_id}} on [date]
-   ```
+1. Read previous epic's `EpicDescription.md`
+2. Remove `{{feature_id}}` from: Features Breakdown table, Progress Tracking table, Feature Details section, Dependency Flow Diagram (node + arrows)
+3. Recalculate previous epic's Overall Progress
+4. Add note: `> **Note:** {{feature_id}} was moved to {{epic_id}} on [date]`
 
 ---
 
-## Step 6: Confirm Completion
-
-Provide a summary:
+## Phase 7: Confirm Completion
 
 ```
 Feature Linked to Epic Successfully
@@ -211,21 +181,20 @@ Feature: {{feature_id}} - [Feature Title]
 Epic: {{epic_id}} - [Epic Title]
 
 Updates Made:
+  Feature (FeatureDescription.md):
+  - Parent Epic: Updated to {{epic_id}}
+  - Epic Context: [Added/Already present]
 
-Feature (FeatureDescription.md):
-- Parent Epic field: Updated to {{epic_id}}
-- Epic Context section: [Added/Already present]
+  Epic (EpicDescription.md):
+  - Features Breakdown: Added {{feature_id}}
+  - Progress Tracking: Added {{feature_id}} ([Status])
+  - Feature Details: Added section
+  - Dependency Diagram: Added node [with/without] dependencies
 
-Epic (EpicDescription.md):
-- Features Breakdown: Added {{feature_id}}
-- Progress Tracking: Added {{feature_id}} ([Status])
-- Feature Details: Added section for {{feature_id}}
-- Dependency Diagram: Added node [with/without] dependencies
-
-[If re-linked]
-Previous Epic ([PREVIOUS_EPIC_ID]):
-- Removed {{feature_id}} from all sections
-- Updated progress tracking
+  [If re-linked]
+  Previous Epic ([PREVIOUS_EPIC_ID]):
+  - Removed {{feature_id}} from all sections
+  - Updated progress tracking
 
 Epic Progress: X/Y features complete (Z%)
 
@@ -236,20 +205,31 @@ Next Steps:
 
 ---
 
-## Error Handling
+## Rules
 
-- **Feature not found:** Report error with search locations tried
-- **Epic not found:** Report error
-- **Feature already in epic:** Report and STOP (no action needed)
-- **Epic is CANCELLED:** Report error - cannot link to cancelled epic
-- **Circular dependency:** If linking creates a circular dependency, warn user
-- **Write failure:** Report which file failed and what was successfully updated
+- Always update both sides of the link — never one without the other
+- Re-linking cleans up the previous epic completely
+- Feature's current status is preserved when added to the epic
+- Feature dependencies are reflected in the epic's diagram
 
 ---
 
-## Important Notes
+## Error Recovery
 
-1. **Bidirectional Update:** Both feature AND epic are updated to maintain consistency
-2. **Re-linking Support:** Features can be moved between epics (previous epic is cleaned up)
-3. **Status Preservation:** Feature's current status is reflected in epic's tracking
-4. **Dependency Awareness:** Feature's dependencies are added to epic's diagram
+| Scenario | Action |
+|----------|--------|
+| Feature not found | Report error with search locations tried |
+| Epic not found | Report error |
+| Feature already in this epic | Report and STOP (no action needed) |
+| Epic is CANCELLED | Report error — cannot link to cancelled epic |
+| Circular dependency created | Warn user about the cycle |
+| Write failure | Report which file failed and what was successfully updated |
+
+---
+
+## Related Commands
+
+- **submit-feature** — create a feature with `epic_id` to link at creation time
+- **submit-epic** — create the epic to link features to
+- **create-epic-features** — batch-create features from an epic (alternative to linking existing ones)
+- **epic-status-update** — shared reference for how feature state changes update the epic

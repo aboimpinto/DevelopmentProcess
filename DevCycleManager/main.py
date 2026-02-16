@@ -106,7 +106,7 @@ async def run_submit_feature(description: str, title: Optional[str] = None, exte
 
     # Replace placeholders with actual values
     procedure = procedure_template.replace("{{description}}", description or "")
-    procedure = procedure_template.replace("{{title}}", title or "[Not provided - LLM should generate]")
+    procedure = procedure.replace("{{title}}", title or "[Not provided - LLM should generate]")
     procedure = procedure.replace("{{external_id}}", external_id or "[Not provided]")
     procedure = procedure.replace("{{epic_id}}", epic_id or "[Not provided - standalone feature]")
 
@@ -263,7 +263,7 @@ async def run_refine_feature(feature_id: str, feature_path: Optional[str] = None
 
     # Replace placeholders with actual values
     procedure = procedure_template.replace("{{feature_id}}", feature_id or "")
-    procedure = procedure_template.replace("{{feature_path}}", feature_path or "[Not provided - search in MemoryBank/Features/]")
+    procedure = procedure.replace("{{feature_path}}", feature_path or "[Not provided - search in MemoryBank/Features/]")
 
     return {
         "status": "pending_execution",
