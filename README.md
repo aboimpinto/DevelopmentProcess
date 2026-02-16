@@ -182,6 +182,10 @@ MemoryBank/              # Knowledge base (volume-mounted)
     └── 05_CANCELLED/    # Abandoned
 ```
 
+## Acknowledgements
+
+The prompt template structure was inspired by the patterns found in [VoltAgent/awesome-claude-code-subagents](https://github.com/VoltAgent/awesome-claude-code-subagents). Key patterns adopted include HTML comment frontmatter, persona definitions with core beliefs, completion checklists, and structured error recovery tables.
+
 ## Prompt Template Structure
 
 All prompt templates follow a consistent structure:
