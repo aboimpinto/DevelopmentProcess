@@ -45,11 +45,29 @@ This procedure is DONE when:
 
 ---
 
+## Phase 0: Resolve Memory Bank Path
+
+1. Read `CLAUDE.md` in the project root.
+2. Find the `## DevCycle Settings` section and extract `Memory Bank: <path>`.
+3. **If found** → set `{MEMORY_BANK_PATH}` = extracted path (e.g., `MemoryBank`).
+4. **If NOT found**:
+   - Ask the user: "Where should the Memory Bank folder be stored? (recommended: `MemoryBank`)"
+   - Wait for their response.
+   - Set `{MEMORY_BANK_PATH}` = user's chosen path.
+   - Append to `CLAUDE.md`:
+     ```
+     ## DevCycle Settings
+     Memory Bank: <chosen_path>
+     ```
+5. Use `{MEMORY_BANK_PATH}` as the base prefix for **all** file paths in this procedure.
+
+---
+
 ## Phase 1: Context Discovery
 
 ### 1.1 Locate Feature
 
-1. Search `MemoryBank/Features/03_IN_PROGRESS/` for `{{feature_id}}*`
+1. Search `{MEMORY_BANK_PATH}/Features/03_IN_PROGRESS/` for `{{feature_id}}*`
 2. If found in `02_READY_TO_DEVELOP/` → inform user to run `start-feature` first
 3. **If not found** → Stop and report error
 
@@ -61,9 +79,9 @@ Verify these exist:
 ### 1.3 Read Project Context
 
 Read and internalize:
-- `MemoryBank/Overview/` — project vision and goals
-- `MemoryBank/Architecture/` — components, patterns, layers
-- `MemoryBank/CodeGuidelines/` — standards and technologies
+- `{MEMORY_BANK_PATH}/Overview/` — project vision and goals
+- `{MEMORY_BANK_PATH}/Architecture/` — components, patterns, layers
+- `{MEMORY_BANK_PATH}/CodeGuidelines/` — standards and technologies
 
 ### 1.4 Extract Build/Test/Lint Commands
 
@@ -175,7 +193,7 @@ Update task in phase file:
 Collect:
 1. **Requirements**: User story, Gherkin specs, data requirements, business rules
 2. **Design context**: `design-summary.md`, `UX-research-report.md`, `Phases/code-samples/`
-3. **Standards**: `MemoryBank/CodeGuidelines/`
+3. **Standards**: `{MEMORY_BANK_PATH}/CodeGuidelines/`
 
 ### 4.3 Implement
 
@@ -310,7 +328,7 @@ Update FeatureTasks.md Phase Summary.
 
 ## Phase 6: LessonsLearned
 
-Create `MemoryBank/LessonsLearned/{{feature_id}}/Phase-{N}-{name}.md`:
+Create `{MEMORY_BANK_PATH}/LessonsLearned/{{feature_id}}/Phase-{N}-{name}.md`:
 
 ```markdown
 # Lessons Learned: Phase {N} - {Phase Name}

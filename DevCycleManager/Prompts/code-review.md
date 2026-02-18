@@ -42,11 +42,29 @@ This procedure is DONE when:
 
 ---
 
+## Phase 0: Resolve Memory Bank Path
+
+1. Read `CLAUDE.md` in the project root.
+2. Find the `## DevCycle Settings` section and extract `Memory Bank: <path>`.
+3. **If found** → set `{MEMORY_BANK_PATH}` = extracted path (e.g., `MemoryBank`).
+4. **If NOT found**:
+   - Ask the user: "Where should the Memory Bank folder be stored? (recommended: `MemoryBank`)"
+   - Wait for their response.
+   - Set `{MEMORY_BANK_PATH}` = user's chosen path.
+   - Append to `CLAUDE.md`:
+     ```
+     ## DevCycle Settings
+     Memory Bank: <chosen_path>
+     ```
+5. Use `{MEMORY_BANK_PATH}` as the base prefix for **all** file paths in this procedure.
+
+---
+
 ## Phase 1: Context Gathering
 
 ### 1.1 Locate Feature and Phase
 
-1. Search `MemoryBank/Features/03_IN_PROGRESS/` for `{{feature_id}}*`
+1. Search `{MEMORY_BANK_PATH}/Features/03_IN_PROGRESS/` for `{{feature_id}}*`
 2. Locate `Phases/phase-{{phase_number}}-*.md`
 3. **If not found** → Stop and report error
 
@@ -69,9 +87,9 @@ If skipping, report:
 ### 1.3 Read Project Standards
 
 Read and internalize:
-- `MemoryBank/CodeGuidelines/` — naming, structure, error handling, testing rules
-- `MemoryBank/Architecture/` — layers, component patterns, module boundaries
-- `MemoryBank/LessonsLearned/` — past mistakes, proven patterns, anti-patterns
+- `{MEMORY_BANK_PATH}/CodeGuidelines/` — naming, structure, error handling, testing rules
+- `{MEMORY_BANK_PATH}/Architecture/` — layers, component patterns, module boundaries
+- `{MEMORY_BANK_PATH}/LessonsLearned/` — past mistakes, proven patterns, anti-patterns
 
 ### 1.4 Extract Phase Context
 
@@ -260,7 +278,7 @@ Status icons: APPROVED, APPROVED_WITH_NOTES, NEEDS_CHANGES
 |----------|--------|
 | Git commands fail | Report: "Cannot extract commits. Ensure git is available and commits are tracked in phase file." |
 | File not found | Skip file, note in report: "File referenced in commits but not found on disk." |
-| CodeGuidelines empty | Stop: "Cannot review without guidelines. Create them in MemoryBank/CodeGuidelines/ first." |
+| CodeGuidelines empty | Stop: "Cannot review without guidelines. Create them in {MEMORY_BANK_PATH}/CodeGuidelines/ first." |
 
 ---
 

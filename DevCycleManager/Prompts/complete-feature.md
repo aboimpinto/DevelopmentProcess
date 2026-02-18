@@ -48,9 +48,27 @@ This procedure is DONE when:
 
 ---
 
+## Phase 0: Resolve Memory Bank Path
+
+1. Read `CLAUDE.md` in the project root.
+2. Find the `## DevCycle Settings` section and extract `Memory Bank: <path>`.
+3. **If found** → set `{MEMORY_BANK_PATH}` = extracted path (e.g., `MemoryBank`).
+4. **If NOT found**:
+   - Ask the user: "Where should the Memory Bank folder be stored? (recommended: `MemoryBank`)"
+   - Wait for their response.
+   - Set `{MEMORY_BANK_PATH}` = user's chosen path.
+   - Append to `CLAUDE.md`:
+     ```
+     ## DevCycle Settings
+     Memory Bank: <chosen_path>
+     ```
+5. Use `{MEMORY_BANK_PATH}` as the base prefix for **all** file paths in this procedure.
+
+---
+
 ## Phase 1: Locate and Read Feature
 
-1. Search `MemoryBank/Features/03_IN_PROGRESS/` for `{{feature_id}}*`
+1. Search `{MEMORY_BANK_PATH}/Features/03_IN_PROGRESS/` for `{{feature_id}}*`
 2. **If not found** → Stop: "Feature {{feature_id}} not found in 03_IN_PROGRESS."
 3. Read all feature documentation:
 
@@ -122,7 +140,7 @@ Execute project test command. Required: 100% passing. If fails → report failur
 
 ### 5.1 Collect Phase-Level Lessons
 
-Read all `MemoryBank/LessonsLearned/{{feature_id}}/Phase-*-*.md` documents. Extract: what went well, challenges, technical decisions, patterns discovered, time analysis insights.
+Read all `{MEMORY_BANK_PATH}/LessonsLearned/{{feature_id}}/Phase-*-*.md` documents. Extract: what went well, challenges, technical decisions, patterns discovered, time analysis insights.
 
 ### 5.2 Analyze Feature Metrics
 
@@ -138,7 +156,7 @@ Present auto-detected lessons and time analysis to the user. Ask:
 
 ### 5.4 Create Feature-Level Lessons Learned
 
-Save to `MemoryBank/LessonsLearned/{{feature_id}}/Feature-Completion-LessonsLearned.md` containing:
+Save to `{MEMORY_BANK_PATH}/LessonsLearned/{{feature_id}}/Feature-Completion-LessonsLearned.md` containing:
 
 | Section | Content |
 |---------|---------|
@@ -155,7 +173,7 @@ Save to `MemoryBank/LessonsLearned/{{feature_id}}/Feature-Completion-LessonsLear
 
 ### 5.5 Update Global Index
 
-If `MemoryBank/LessonsLearned/README.md` exists, add entry for this feature.
+If `{MEMORY_BANK_PATH}/LessonsLearned/README.md` exists, add entry for this feature.
 
 ---
 
@@ -207,8 +225,8 @@ If user says no → "Feature completion cancelled. Feature remains in 03_IN_PROG
 ### 8.1 Move Feature Folder
 
 ```bash
-mkdir -p "MemoryBank/Features/04_COMPLETED"
-git mv "MemoryBank/Features/03_IN_PROGRESS/{{feature_id}}-{name}" "MemoryBank/Features/04_COMPLETED/{{feature_id}}-{name}"
+mkdir -p "{MEMORY_BANK_PATH}/Features/04_COMPLETED"
+git mv "{MEMORY_BANK_PATH}/Features/03_IN_PROGRESS/{{feature_id}}-{name}" "{MEMORY_BANK_PATH}/Features/04_COMPLETED/{{feature_id}}-{name}"
 ```
 
 ### 8.2 Create Completion Commit

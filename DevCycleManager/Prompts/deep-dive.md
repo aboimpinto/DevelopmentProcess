@@ -40,6 +40,24 @@ This procedure is DONE when:
 
 ---
 
+## Phase 0: Resolve Memory Bank Path
+
+1. Read `CLAUDE.md` in the project root.
+2. Find the `## DevCycle Settings` section and extract `Memory Bank: <path>`.
+3. **If found** → set `{MEMORY_BANK_PATH}` = extracted path (e.g., `MemoryBank`).
+4. **If NOT found**:
+   - Ask the user: "Where should the Memory Bank folder be stored? (recommended: `MemoryBank`)"
+   - Wait for their response.
+   - Set `{MEMORY_BANK_PATH}` = user's chosen path.
+   - Append to `CLAUDE.md`:
+     ```
+     ## DevCycle Settings
+     Memory Bank: <chosen_path>
+     ```
+5. Use `{MEMORY_BANK_PATH}` as the base prefix for **all** file paths in this procedure.
+
+---
+
 ## Phase 1: Read and Classify
 
 1. Read the file at `{{file_path}}`
@@ -50,8 +68,8 @@ This procedure is DONE when:
 | EpicDescription | `Features/00_EPICS/*/EpicDescription.md` |
 | FeatureDescription | `Features/*/FeatureDescription.md` |
 | Phase file | `Features/*/Phases/phase-*.md` |
-| Overview file | `MemoryBank/Overview/` |
-| Architecture file | `MemoryBank/Architecture/` |
+| Overview file | `{MEMORY_BANK_PATH}/Overview/` |
+| Architecture file | `{MEMORY_BANK_PATH}/Architecture/` |
 | Other spec | Any other specification document |
 
 3. Note what is present, what is missing, what is vague

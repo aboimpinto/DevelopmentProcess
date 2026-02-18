@@ -44,9 +44,27 @@ This procedure is DONE when:
 
 ---
 
+## Phase 0: Resolve Memory Bank Path
+
+1. Read `CLAUDE.md` in the project root.
+2. Find the `## DevCycle Settings` section and extract `Memory Bank: <path>`.
+3. **If found** → set `{MEMORY_BANK_PATH}` = extracted path (e.g., `MemoryBank`).
+4. **If NOT found**:
+   - Ask the user: "Where should the Memory Bank folder be stored? (recommended: `MemoryBank`)"
+   - Wait for their response.
+   - Set `{MEMORY_BANK_PATH}` = user's chosen path.
+   - Append to `CLAUDE.md`:
+     ```
+     ## DevCycle Settings
+     Memory Bank: <chosen_path>
+     ```
+5. Use `{MEMORY_BANK_PATH}` as the base prefix for **all** file paths in this procedure.
+
+---
+
 ## Phase 1: Locate Feature
 
-1. Search `MemoryBank/Features/02_READY_TO_DEVELOP/` for `{{feature_id}}*`
+1. Search `{MEMORY_BANK_PATH}/Features/02_READY_TO_DEVELOP/` for `{{feature_id}}*`
 2. Verify required files exist:
 
 | File / Folder | Required |
@@ -235,7 +253,7 @@ If no parent epic → skip.
 
 If connected to git:
 
-1. Stage: `git add MemoryBank/Features/`
+1. Stage: `git add {MEMORY_BANK_PATH}/Features/`
 2. Commit:
    ```
    feat({{feature_id}}): Start implementation - move to IN_PROGRESS

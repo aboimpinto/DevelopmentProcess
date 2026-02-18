@@ -41,13 +41,31 @@ This procedure is DONE when:
 
 ---
 
+## Phase 0: Resolve Memory Bank Path
+
+1. Read `CLAUDE.md` in the project root.
+2. Find the `## DevCycle Settings` section and extract `Memory Bank: <path>`.
+3. **If found** → set `{MEMORY_BANK_PATH}` = extracted path (e.g., `MemoryBank`).
+4. **If NOT found**:
+   - Ask the user: "Where should the Memory Bank folder be stored? (recommended: `MemoryBank`)"
+   - Wait for their response.
+   - Set `{MEMORY_BANK_PATH}` = user's chosen path.
+   - Append to `CLAUDE.md`:
+     ```
+     ## DevCycle Settings
+     Memory Bank: <chosen_path>
+     ```
+5. Use `{MEMORY_BANK_PATH}` as the base prefix for **all** file paths in this procedure.
+
+---
+
 ## Phase 1: Context Gathering
 
 Read and understand (before generating any content):
-1. `MemoryBank/Overview/` — project vision, goals
-2. `MemoryBank/Architecture/` — components, patterns
-3. `MemoryBank/Features/00_EPICS/` — existing epics (avoid duplicates)
-4. `MemoryBank/Features/` — existing features in 02-04 folders
+1. `{MEMORY_BANK_PATH}/Overview/` — project vision, goals
+2. `{MEMORY_BANK_PATH}/Architecture/` — components, patterns
+3. `{MEMORY_BANK_PATH}/Features/00_EPICS/` — existing epics (avoid duplicates)
+4. `{MEMORY_BANK_PATH}/Features/` — existing features in 02-04 folders
 
 If folders are empty → note in description as early-stage project.
 
@@ -57,7 +75,7 @@ If folders are empty → note in description as early-stage project.
 
 ### 2.1 Manage Epic ID Counter
 
-Read/create `MemoryBank/Features/00_EPICS/NEXT_EPIC_ID.txt`:
+Read/create `{MEMORY_BANK_PATH}/Features/00_EPICS/NEXT_EPIC_ID.txt`:
 - If missing → create with `1`, use `1`
 - If exists → read number, use it, increment, write back
 
@@ -77,7 +95,7 @@ Format: `EPIC-XXX-slug`. Example: `EPIC-001-reporting-dashboard`
 
 ## Phase 3: Generate EpicDescription.md
 
-Create in `MemoryBank/Features/00_EPICS/{folder}/EpicDescription.md`:
+Create in `{MEMORY_BANK_PATH}/Features/00_EPICS/{folder}/EpicDescription.md`:
 
 ```markdown
 # EPIC-XXX: {Title}
@@ -192,7 +210,7 @@ flowchart TD
 
 ## Phase 4: Create Files
 
-1. Ensure `MemoryBank/Features/00_EPICS/` exists
+1. Ensure `{MEMORY_BANK_PATH}/Features/00_EPICS/` exists
 2. Create epic folder
 3. Write `EpicDescription.md`
 4. Update `NEXT_EPIC_ID.txt`
@@ -206,7 +224,7 @@ Epic Submitted Successfully
 
 - Epic ID: EPIC-XXX
 - Title: {title}
-- Location: MemoryBank/Features/00_EPICS/{folder}/
+- Location: {MEMORY_BANK_PATH}/Features/00_EPICS/{folder}/
 
 Next Steps:
 1. Run `deep-dive` on EpicDescription.md for comprehensive details

@@ -1,15 +1,15 @@
 {
     "directories": [
-        "MemoryBank/Features/00_EPICS",
-        "MemoryBank/Features/01_SUBMITTED",
-        "MemoryBank/Features/02_READY_TO_DEVELOP",
-        "MemoryBank/Features/03_IN_PROGRESS",
-        "MemoryBank/Features/04_COMPLETED",
-        "MemoryBank/Features/05_CANCELLED",
-        "MemoryBank/Overview",
-        "MemoryBank/CodeGuidelines",
-        "MemoryBank/Architecture",
-        "MemoryBank/LessonsLearned",
-        "MemoryBank/Tools"
+        "Features/00_EPICS",
+        "Features/01_SUBMITTED",
+        "Features/02_READY_TO_DEVELOP",
+        "Features/03_IN_PROGRESS",
+        "Features/04_COMPLETED",
+        "Features/05_CANCELLED",
+        "Overview",
+        "CodeGuidelines",
+        "Architecture",
+        "LessonsLearned",
+        "Tools"
     ]
 }

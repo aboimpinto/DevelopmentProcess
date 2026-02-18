@@ -44,21 +44,39 @@ This procedure is DONE when:
 
 ---
 
+## Phase 0: Resolve Memory Bank Path
+
+1. Read `CLAUDE.md` in the project root.
+2. Find the `## DevCycle Settings` section and extract `Memory Bank: <path>`.
+3. **If found** → set `{MEMORY_BANK_PATH}` = extracted path (e.g., `MemoryBank`).
+4. **If NOT found**:
+   - Ask the user: "Where should the Memory Bank folder be stored? (recommended: `MemoryBank`)"
+   - Wait for their response.
+   - Set `{MEMORY_BANK_PATH}` = user's chosen path.
+   - Append to `CLAUDE.md`:
+     ```
+     ## DevCycle Settings
+     Memory Bank: <chosen_path>
+     ```
+5. Use `{MEMORY_BANK_PATH}` as the base prefix for **all** file paths in this procedure.
+
+---
+
 ## Phase 1: Context Gathering
 
 ### 1.1 Read Project Context
 
 Read and understand (before generating any content):
-1. `MemoryBank/Overview/` — project vision, goals
-2. `MemoryBank/Architecture/` — components, patterns
-3. `MemoryBank/CodeGuidelines/` — standards, technologies
-4. `MemoryBank/Features/` — existing features in 02-04 folders (avoid duplicates)
+1. `{MEMORY_BANK_PATH}/Overview/` — project vision, goals
+2. `{MEMORY_BANK_PATH}/Architecture/` — components, patterns
+3. `{MEMORY_BANK_PATH}/CodeGuidelines/` — standards, technologies
+4. `{MEMORY_BANK_PATH}/Features/` — existing features in 02-04 folders (avoid duplicates)
 
 If folders are empty → note in Technical Considerations as early-stage project.
 
 ### 1.2 Validate Parent Epic (If Provided)
 
-1. Search `MemoryBank/Features/00_EPICS/` for `{{epic_id}}*`
+1. Search `{MEMORY_BANK_PATH}/Features/00_EPICS/` for `{{epic_id}}*`
 2. If found → read `EpicDescription.md`, verify not CANCELLED, note strategic goal
 3. **If not found** → Stop: "Parent epic {{epic_id}} not found. Create it with submit-epic first."
 
@@ -68,7 +86,7 @@ If folders are empty → note in Technical Considerations as early-stage project
 
 ### 2.1 Manage Feature ID Counter
 
-Read/create `MemoryBank/Features/NEXT_FEATURE_ID.txt`:
+Read/create `{MEMORY_BANK_PATH}/Features/NEXT_FEATURE_ID.txt`:
 - If missing → create with `1`, use `1`
 - If exists → read number, use it, increment, write back
 
@@ -88,7 +106,7 @@ Format: `FEAT-XXX-slug` (or `FEAT-XXX-EXT-YYY-slug` if external ID provided)
 
 ## Phase 3: Generate FeatureDescription.md
 
-Create in `MemoryBank/Features/01_SUBMITTED/{folder}/FeatureDescription.md`:
+Create in `{MEMORY_BANK_PATH}/Features/01_SUBMITTED/{folder}/FeatureDescription.md`:
 
 ```markdown
 # Feature: {Title}
@@ -163,7 +181,7 @@ Feature Submitted Successfully
 - Feature ID: FEAT-XXX
 - Title: {title}
 - Parent Epic: {epic_id or "None - Standalone"}
-- Location: MemoryBank/Features/01_SUBMITTED/{folder}/
+- Location: {MEMORY_BANK_PATH}/Features/01_SUBMITTED/{folder}/
 
 Next Steps:
 1. Run `deep-dive` to gather more details

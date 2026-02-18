@@ -41,9 +41,27 @@ This procedure is DONE when:
 
 ---
 
+## Phase 0: Resolve Memory Bank Path
+
+1. Read `CLAUDE.md` in the project root.
+2. Find the `## DevCycle Settings` section and extract `Memory Bank: <path>`.
+3. **If found** → set `{MEMORY_BANK_PATH}` = extracted path (e.g., `MemoryBank`).
+4. **If NOT found**:
+   - Ask the user: "Where should the Memory Bank folder be stored? (recommended: `MemoryBank`)"
+   - Wait for their response.
+   - Set `{MEMORY_BANK_PATH}` = user's chosen path.
+   - Append to `CLAUDE.md`:
+     ```
+     ## DevCycle Settings
+     Memory Bank: <chosen_path>
+     ```
+5. Use `{MEMORY_BANK_PATH}` as the base prefix for **all** file paths in this procedure.
+
+---
+
 ## Phase 1: Locate and Validate Epic
 
-1. If `epic_path` provided, use it directly; otherwise search `MemoryBank/Features/00_EPICS/` for folder starting with `{{epic_id}}`
+1. If `epic_path` provided, use it directly; otherwise search `{MEMORY_BANK_PATH}/Features/00_EPICS/` for folder starting with `{{epic_id}}`
 2. Read `EpicDescription.md`
 3. Validate epic is NOT CANCELLED — if CANCELLED, report error and STOP
 

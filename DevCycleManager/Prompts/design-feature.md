@@ -43,11 +43,29 @@ This procedure is DONE when:
 
 ---
 
+## Phase 0: Resolve Memory Bank Path
+
+1. Read `CLAUDE.md` in the project root.
+2. Find the `## DevCycle Settings` section and extract `Memory Bank: <path>`.
+3. **If found** → set `{MEMORY_BANK_PATH}` = extracted path (e.g., `MemoryBank`).
+4. **If NOT found**:
+   - Ask the user: "Where should the Memory Bank folder be stored? (recommended: `MemoryBank`)"
+   - Wait for their response.
+   - Set `{MEMORY_BANK_PATH}` = user's chosen path.
+   - Append to `CLAUDE.md`:
+     ```
+     ## DevCycle Settings
+     Memory Bank: <chosen_path>
+     ```
+5. Use `{MEMORY_BANK_PATH}` as the base prefix for **all** file paths in this procedure.
+
+---
+
 ## Phase 1: Locate and Analyze
 
 ### 1.1 Find the Feature
 
-Search `MemoryBank/Features/` in order: `01_SUBMITTED/`, `02_READY_TO_DEVELOP/`, `03_IN_PROGRESS/` for `{{feature_id}}*` folders.
+Search `{MEMORY_BANK_PATH}/Features/` in order: `01_SUBMITTED/`, `02_READY_TO_DEVELOP/`, `03_IN_PROGRESS/` for `{{feature_id}}*` folders.
 
 **If not found** → Stop: "Feature {{feature_id}} not found in any state folder."
 
@@ -56,9 +74,9 @@ Search `MemoryBank/Features/` in order: `01_SUBMITTED/`, `02_READY_TO_DEVELOP/`,
 | Source | Purpose |
 |--------|---------|
 | `FeatureDescription.md` | Primary requirements (REQUIRED) |
-| `MemoryBank/Overview/` | Project vision and goals |
-| `MemoryBank/Architecture/` | Existing components and patterns |
-| `MemoryBank/CodeGuidelines/` | Standards and technologies |
+| `{MEMORY_BANK_PATH}/Overview/` | Project vision and goals |
+| `{MEMORY_BANK_PATH}/Architecture/` | Existing components and patterns |
+| `{MEMORY_BANK_PATH}/CodeGuidelines/` | Standards and technologies |
 
 ### 1.3 Check for Backend-Only Feature
 
@@ -68,7 +86,7 @@ Look for indicators in FeatureDescription.md: "backend", "API only", "no UI", "s
 
 ### 1.4 Find Existing Design Assets
 
-Search the feature folder and `MemoryBank/` for screenshots (*.png, *.jpg), mockups, wireframes, UI specs, or design guidelines. Note findings for use in Phases 2-4.
+Search the feature folder and `{MEMORY_BANK_PATH}/` for screenshots (*.png, *.jpg), mockups, wireframes, UI specs, or design guidelines. Note findings for use in Phases 2-4.
 
 ---
 
@@ -178,7 +196,7 @@ Translate UX research into visual specifications and component layouts.
 ### Pre-Read
 
 1. The UX-research-report.md just created
-2. Any design system or component library docs in `MemoryBank/`
+2. Any design system or component library docs in `{MEMORY_BANK_PATH}/`
 3. Screenshots or mockups found in Phase 1
 
 ### Design Areas

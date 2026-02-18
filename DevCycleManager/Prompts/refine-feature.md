@@ -46,11 +46,29 @@ This procedure is DONE when:
 
 ---
 
+## Phase 0: Resolve Memory Bank Path
+
+1. Read `CLAUDE.md` in the project root.
+2. Find the `## DevCycle Settings` section and extract `Memory Bank: <path>`.
+3. **If found** → set `{MEMORY_BANK_PATH}` = extracted path (e.g., `MemoryBank`).
+4. **If NOT found**:
+   - Ask the user: "Where should the Memory Bank folder be stored? (recommended: `MemoryBank`)"
+   - Wait for their response.
+   - Set `{MEMORY_BANK_PATH}` = user's chosen path.
+   - Append to `CLAUDE.md`:
+     ```
+     ## DevCycle Settings
+     Memory Bank: <chosen_path>
+     ```
+5. Use `{MEMORY_BANK_PATH}` as the base prefix for **all** file paths in this procedure.
+
+---
+
 ## Phase 1: Locate and Analyze
 
 ### 1.1 Find the Feature
 
-Search `MemoryBank/Features/` in order: `01_SUBMITTED/`, `02_READY_TO_DEVELOP/` for `{{feature_id}}*` folders.
+Search `{MEMORY_BANK_PATH}/Features/` in order: `01_SUBMITTED/`, `02_READY_TO_DEVELOP/` for `{{feature_id}}*` folders.
 
 **If not found** → Stop: "Feature {{feature_id}} not found."
 
@@ -67,9 +85,9 @@ Search `MemoryBank/Features/` in order: `01_SUBMITTED/`, `02_READY_TO_DEVELOP/` 
 
 | Source | Purpose |
 |--------|---------|
-| `MemoryBank/Overview/` | Project vision, architecture |
-| `MemoryBank/Architecture/` | System design, components |
-| `MemoryBank/CodeGuidelines/` | Standards, patterns, conventions |
+| `{MEMORY_BANK_PATH}/Overview/` | Project vision, architecture |
+| `{MEMORY_BANK_PATH}/Architecture/` | System design, components |
+| `{MEMORY_BANK_PATH}/CodeGuidelines/` | Standards, patterns, conventions |
 
 ### 1.4 Detect Technology Stack
 
@@ -103,7 +121,7 @@ Document findings in this format:
 
 ### 1.5 Extract Build and Test Commands
 
-Search `MemoryBank/CodeGuidelines/`, `MemoryBank/Overview/`, `README.md`, `CLAUDE.md` for:
+Search `{MEMORY_BANK_PATH}/CodeGuidelines/`, `{MEMORY_BANK_PATH}/Overview/`, `README.md`, `CLAUDE.md` for:
 
 | Information | Command/Value |
 |-------------|---------------|
@@ -486,7 +504,7 @@ Create `FeatureTasks.md` in the feature folder:
 - [ ] **Lint Command**: Not documented - user must confirm if lint is used
 - [ ] **Success Criteria**: Not documented - using defaults (0 errors, 0 warnings, all tests pass)
 
-**Action Required**: Before starting Phase 0, ensure all build, test, and lint commands are documented in `MemoryBank/CodeGuidelines/` or update this section with the correct commands.
+**Action Required**: Before starting Phase 0, ensure all build, test, and lint commands are documented in `{MEMORY_BANK_PATH}/CodeGuidelines/` or update this section with the correct commands.
 
 ---
 
@@ -604,7 +622,7 @@ Present this summary:
 ```
 Feature Refinement Complete for {{feature_id}}
 
-Feature Location: MemoryBank/Features/02_READY_TO_DEVELOP/[feature-folder]/
+Feature Location: {MEMORY_BANK_PATH}/Features/02_READY_TO_DEVELOP/[feature-folder]/
 
 Documents Created:
    - FeatureTasks.md - Task summary with phase links

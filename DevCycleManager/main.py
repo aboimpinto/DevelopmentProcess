@@ -41,15 +41,20 @@ async def run_init_project() -> dict:
     except json.JSONDecodeError:
         raise HTTPException(status_code=500, detail="Error decoding init-project.json.")
 
-    instructions = "Please initialize the project structure by creating the following directories:\n\n"
-    for folder in required_folders:
-        instructions += f"- {folder}\n"
-    
     return {
         "status": "pending_action",
         "action": "create_directories",
         "directories": required_folders,
-        "message": instructions
+        "context_files": ["CLAUDE.md"],
+        "message": (
+            "STEP 1: Read CLAUDE.md and find 'Memory Bank: <path>' under '## DevCycle Settings'. "
+            "If not found, ask the user where to store the Memory Bank (suggest 'MemoryBank'), "
+            "then write it to CLAUDE.md as:\n\n"
+            "## DevCycle Settings\n"
+            "Memory Bank: <chosen_path>\n\n"
+            "STEP 2: Create the following directories UNDER the Memory Bank path:\n\n"
+            + "".join(f"- {{memory_bank}}/{folder}\n" for folder in required_folders)
+        )
     }
 
 async def run_submit_epic(description: str, title: Optional[str] = None, external_id: Optional[str] = None) -> dict:
@@ -78,13 +83,14 @@ async def run_submit_epic(description: str, title: Optional[str] = None, externa
         "procedure_name": "submit-epic",
         "instructions": procedure,
         "context_folders": [
-            "MemoryBank/Overview/",
-            "MemoryBank/Architecture/",
-            "MemoryBank/Features/00_EPICS/",
-            "MemoryBank/Features/"
+            "{memory_bank}/Overview/",
+            "{memory_bank}/Architecture/",
+            "{memory_bank}/Features/00_EPICS/",
+            "{memory_bank}/Features/"
         ],
         "context_files": [
-            "MemoryBank/Features/00_EPICS/NEXT_EPIC_ID.txt"
+            "CLAUDE.md",
+            "{memory_bank}/Features/00_EPICS/NEXT_EPIC_ID.txt"
         ],
         "message": "Execute the submit-epic procedure. IMPORTANT: Start with Step 0 to read the project context before generating the epic description."
     }
@@ -116,14 +122,15 @@ async def run_submit_feature(description: str, title: Optional[str] = None, exte
         "procedure_name": "submit-feature",
         "instructions": procedure,
         "context_folders": [
-            "MemoryBank/Overview/",
-            "MemoryBank/Architecture/",
-            "MemoryBank/CodeGuidelines/",
-            "MemoryBank/Features/",
-            "MemoryBank/Features/00_EPICS/"
+            "{memory_bank}/Overview/",
+            "{memory_bank}/Architecture/",
+            "{memory_bank}/CodeGuidelines/",
+            "{memory_bank}/Features/",
+            "{memory_bank}/Features/00_EPICS/"
         ],
         "context_files": [
-            "MemoryBank/Features/NEXT_FEATURE_ID.txt"
+            "CLAUDE.md",
+            "{memory_bank}/Features/NEXT_FEATURE_ID.txt"
         ],
         "message": "Execute the submit-feature procedure. IMPORTANT: Start with Step 0 to read the project context before generating the feature description."
     }
@@ -145,7 +152,7 @@ async def run_create_epic_features(epic_id: str, epic_path: Optional[str] = None
 
     # Replace placeholders with actual values
     procedure = procedure_template.replace("{{epic_id}}", epic_id or "")
-    procedure = procedure.replace("{{epic_path}}", epic_path or "[Not provided - search in MemoryBank/Features/00_EPICS/]")
+    procedure = procedure.replace("{{epic_path}}", epic_path or "[Not provided - search in {MEMORY_BANK_PATH}/Features/00_EPICS/ as defined in CLAUDE.md]")
 
     return {
         "status": "pending_execution",
@@ -153,13 +160,14 @@ async def run_create_epic_features(epic_id: str, epic_path: Optional[str] = None
         "procedure_name": "create-epic-features",
         "instructions": procedure,
         "context_folders": [
-            "MemoryBank/Features/00_EPICS/",
-            "MemoryBank/Features/01_SUBMITTED/",
-            "MemoryBank/Overview/",
-            "MemoryBank/Architecture/"
+            "{memory_bank}/Features/00_EPICS/",
+            "{memory_bank}/Features/01_SUBMITTED/",
+            "{memory_bank}/Overview/",
+            "{memory_bank}/Architecture/"
         ],
         "context_files": [
-            "MemoryBank/Features/NEXT_FEATURE_ID.txt"
+            "CLAUDE.md",
+            "{memory_bank}/Features/NEXT_FEATURE_ID.txt"
         ],
         "message": "Execute the create-epic-features procedure. This will batch-create all TBD features from the epic's Features Breakdown table. User confirmation is required before creating."
     }
@@ -183,7 +191,7 @@ async def run_link_feature_to_epic(feature_id: str, epic_id: str, feature_path: 
     procedure = procedure_template.replace("{{feature_id}}", feature_id or "")
     procedure = procedure.replace("{{epic_id}}", epic_id or "")
     procedure = procedure.replace("{{feature_path}}", feature_path or "[Not provided - search in all feature folders]")
-    procedure = procedure.replace("{{epic_path}}", epic_path or "[Not provided - search in MemoryBank/Features/00_EPICS/]")
+    procedure = procedure.replace("{{epic_path}}", epic_path or "[Not provided - search in {MEMORY_BANK_PATH}/Features/00_EPICS/ as defined in CLAUDE.md]")
 
     return {
         "status": "pending_execution",
@@ -191,11 +199,14 @@ async def run_link_feature_to_epic(feature_id: str, epic_id: str, feature_path: 
         "procedure_name": "link-feature-to-epic",
         "instructions": procedure,
         "context_folders": [
-            "MemoryBank/Features/00_EPICS/",
-            "MemoryBank/Features/01_SUBMITTED/",
-            "MemoryBank/Features/02_READY_TO_DEVELOP/",
-            "MemoryBank/Features/03_IN_PROGRESS/",
-            "MemoryBank/Features/04_COMPLETED/"
+            "{memory_bank}/Features/00_EPICS/",
+            "{memory_bank}/Features/01_SUBMITTED/",
+            "{memory_bank}/Features/02_READY_TO_DEVELOP/",
+            "{memory_bank}/Features/03_IN_PROGRESS/",
+            "{memory_bank}/Features/04_COMPLETED/"
+        ],
+        "context_files": [
+            "CLAUDE.md"
         ],
         "message": "Execute the link-feature-to-epic procedure. This links an existing feature to an epic, updating both documents to maintain the relationship."
     }
@@ -220,7 +231,7 @@ async def run_design_feature(feature_id: str, feature_path: Optional[str] = None
 
     # Replace placeholders with actual values
     procedure = procedure_template.replace("{{feature_id}}", feature_id or "")
-    procedure = procedure.replace("{{feature_path}}", feature_path or "[Not provided - search in MemoryBank/Features/]")
+    procedure = procedure.replace("{{feature_path}}", feature_path or "[Not provided - search in {MEMORY_BANK_PATH}/Features/ as defined in CLAUDE.md]")
 
     return {
         "status": "pending_execution",
@@ -228,11 +239,14 @@ async def run_design_feature(feature_id: str, feature_path: Optional[str] = None
         "procedure_name": "design-feature",
         "instructions": procedure,
         "context_folders": [
-            "MemoryBank/Overview/",
-            "MemoryBank/Architecture/",
-            "MemoryBank/CodeGuidelines/",
-            "MemoryBank/Features/01_SUBMITTED/",
-            "MemoryBank/Features/02_READY_TO_DEVELOP/"
+            "{memory_bank}/Overview/",
+            "{memory_bank}/Architecture/",
+            "{memory_bank}/CodeGuidelines/",
+            "{memory_bank}/Features/01_SUBMITTED/",
+            "{memory_bank}/Features/02_READY_TO_DEVELOP/"
+        ],
+        "context_files": [
+            "CLAUDE.md"
         ],
         "outputs": [
             "UX-research-report.md",
@@ -263,7 +277,7 @@ async def run_refine_feature(feature_id: str, feature_path: Optional[str] = None
 
     # Replace placeholders with actual values
     procedure = procedure_template.replace("{{feature_id}}", feature_id or "")
-    procedure = procedure.replace("{{feature_path}}", feature_path or "[Not provided - search in MemoryBank/Features/]")
+    procedure = procedure.replace("{{feature_path}}", feature_path or "[Not provided - search in {MEMORY_BANK_PATH}/Features/ as defined in CLAUDE.md]")
 
     return {
         "status": "pending_execution",
@@ -271,11 +285,14 @@ async def run_refine_feature(feature_id: str, feature_path: Optional[str] = None
         "procedure_name": "refine-feature",
         "instructions": procedure,
         "context_folders": [
-            "MemoryBank/Overview/",
-            "MemoryBank/Architecture/",
-            "MemoryBank/CodeGuidelines/",
-            "MemoryBank/Features/01_SUBMITTED/",
-            "MemoryBank/Features/02_READY_TO_DEVELOP/"
+            "{memory_bank}/Overview/",
+            "{memory_bank}/Architecture/",
+            "{memory_bank}/CodeGuidelines/",
+            "{memory_bank}/Features/01_SUBMITTED/",
+            "{memory_bank}/Features/02_READY_TO_DEVELOP/"
+        ],
+        "context_files": [
+            "CLAUDE.md"
         ],
         "outputs": [
             "FeatureTasks.md",
@@ -314,7 +331,7 @@ async def run_start_feature(feature_id: str, feature_path: Optional[str] = None)
 
     # Replace placeholders with actual values
     procedure = procedure_template.replace("{{feature_id}}", feature_id or "")
-    procedure = procedure.replace("{{feature_path}}", feature_path or "[Not provided - search in MemoryBank/Features/]")
+    procedure = procedure.replace("{{feature_path}}", feature_path or "[Not provided - search in {MEMORY_BANK_PATH}/Features/ as defined in CLAUDE.md]")
 
     return {
         "status": "pending_execution",
@@ -322,10 +339,13 @@ async def run_start_feature(feature_id: str, feature_path: Optional[str] = None)
         "procedure_name": "start-feature",
         "instructions": procedure,
         "context_folders": [
-            "MemoryBank/Overview/",
-            "MemoryBank/Architecture/",
-            "MemoryBank/CodeGuidelines/",
-            "MemoryBank/Features/02_READY_TO_DEVELOP/"
+            "{memory_bank}/Overview/",
+            "{memory_bank}/Architecture/",
+            "{memory_bank}/CodeGuidelines/",
+            "{memory_bank}/Features/02_READY_TO_DEVELOP/"
+        ],
+        "context_files": [
+            "CLAUDE.md"
         ],
         "outputs": [
             "pre-validation-report-[STATUS]-[timestamp].md",
@@ -357,7 +377,7 @@ async def run_continue_implementation(feature_id: str, feature_path: Optional[st
 
     # Replace placeholders with actual values
     procedure = procedure_template.replace("{{feature_id}}", feature_id or "")
-    procedure = procedure.replace("{{feature_path}}", feature_path or "[Not provided - search in MemoryBank/Features/]")
+    procedure = procedure.replace("{{feature_path}}", feature_path or "[Not provided - search in {MEMORY_BANK_PATH}/Features/ as defined in CLAUDE.md]")
 
     return {
         "status": "pending_execution",
@@ -365,11 +385,14 @@ async def run_continue_implementation(feature_id: str, feature_path: Optional[st
         "procedure_name": "continue-implementation",
         "instructions": procedure,
         "context_folders": [
-            "MemoryBank/Overview/",
-            "MemoryBank/Architecture/",
-            "MemoryBank/CodeGuidelines/",
-            "MemoryBank/Features/03_IN_PROGRESS/",
-            "MemoryBank/LessonsLearned/"
+            "{memory_bank}/Overview/",
+            "{memory_bank}/Architecture/",
+            "{memory_bank}/CodeGuidelines/",
+            "{memory_bank}/Features/03_IN_PROGRESS/",
+            "{memory_bank}/LessonsLearned/"
+        ],
+        "context_files": [
+            "CLAUDE.md"
         ],
         "outputs": [
             "Phase updates in Phases/*.md",
@@ -407,7 +430,7 @@ async def run_accept_phase(feature_id: str, phase_number: int, feature_path: Opt
     # Replace placeholders with actual values
     procedure = procedure_template.replace("{{feature_id}}", feature_id or "")
     procedure = procedure.replace("{{phase_number}}", str(phase_number) if phase_number is not None else "")
-    procedure = procedure.replace("{{feature_path}}", feature_path or "[Not provided - search in MemoryBank/Features/]")
+    procedure = procedure.replace("{{feature_path}}", feature_path or "[Not provided - search in {MEMORY_BANK_PATH}/Features/ as defined in CLAUDE.md]")
 
     return {
         "status": "pending_execution",
@@ -415,8 +438,11 @@ async def run_accept_phase(feature_id: str, phase_number: int, feature_path: Opt
         "procedure_name": "accept-phase",
         "instructions": procedure,
         "context_folders": [
-            "MemoryBank/Features/03_IN_PROGRESS/",
-            "MemoryBank/LessonsLearned/"
+            "{memory_bank}/Features/03_IN_PROGRESS/",
+            "{memory_bank}/LessonsLearned/"
+        ],
+        "context_files": [
+            "CLAUDE.md"
         ],
         "outputs": [
             "Phase file updated to COMPLETED",
@@ -454,7 +480,7 @@ async def run_code_review(feature_id: str, phase_number: int, feature_path: Opti
     # Replace placeholders with actual values
     procedure = procedure_template.replace("{{feature_id}}", feature_id or "")
     procedure = procedure.replace("{{phase_number}}", str(phase_number) if phase_number is not None else "")
-    procedure = procedure.replace("{{feature_path}}", feature_path or "[Not provided - search in MemoryBank/Features/]")
+    procedure = procedure.replace("{{feature_path}}", feature_path or "[Not provided - search in {MEMORY_BANK_PATH}/Features/ as defined in CLAUDE.md]")
 
     return {
         "status": "pending_execution",
@@ -462,10 +488,13 @@ async def run_code_review(feature_id: str, phase_number: int, feature_path: Opti
         "procedure_name": "code-review",
         "instructions": procedure,
         "context_folders": [
-            "MemoryBank/CodeGuidelines/",
-            "MemoryBank/Architecture/",
-            "MemoryBank/LessonsLearned/",
-            "MemoryBank/Features/03_IN_PROGRESS/"
+            "{memory_bank}/CodeGuidelines/",
+            "{memory_bank}/Architecture/",
+            "{memory_bank}/LessonsLearned/",
+            "{memory_bank}/Features/03_IN_PROGRESS/"
+        ],
+        "context_files": [
+            "CLAUDE.md"
         ],
         "outputs": [
             "code-reviews/phase-{N}/Code-Review-{timestamp}-{STATUS}.md",
@@ -500,7 +529,7 @@ async def run_complete_feature(feature_id: str, feature_path: Optional[str] = No
 
     # Replace placeholders with actual values
     procedure = procedure_template.replace("{{feature_id}}", feature_id or "")
-    procedure = procedure.replace("{{feature_path}}", feature_path or "[Not provided - search in MemoryBank/Features/]")
+    procedure = procedure.replace("{{feature_path}}", feature_path or "[Not provided - search in {MEMORY_BANK_PATH}/Features/ as defined in CLAUDE.md]")
 
     return {
         "status": "pending_execution",
@@ -508,12 +537,15 @@ async def run_complete_feature(feature_id: str, feature_path: Optional[str] = No
         "procedure_name": "complete-feature",
         "instructions": procedure,
         "context_folders": [
-            "MemoryBank/Features/03_IN_PROGRESS/",
-            "MemoryBank/LessonsLearned/"
+            "{memory_bank}/Features/03_IN_PROGRESS/",
+            "{memory_bank}/LessonsLearned/"
+        ],
+        "context_files": [
+            "CLAUDE.md"
         ],
         "outputs": [
             "feature-completion-report.md",
-            "MemoryBank/LessonsLearned/{feature_id}/Feature-Completion-LessonsLearned.md",
+            "{memory_bank}/LessonsLearned/{feature_id}/Feature-Completion-LessonsLearned.md",
             "FeatureTasks.md updated with completion status",
             "Feature folder moved to 04_COMPLETED/",
             "Git commit with completion details"
@@ -552,10 +584,13 @@ async def run_deep_dive(file_path: str) -> dict:
         "procedure_name": "deep-dive",
         "instructions": procedure,
         "context_folders": [
-            "MemoryBank/Overview/",
-            "MemoryBank/Architecture/",
-            "MemoryBank/CodeGuidelines/",
-            "MemoryBank/Features/"
+            "{memory_bank}/Overview/",
+            "{memory_bank}/Architecture/",
+            "{memory_bank}/CodeGuidelines/",
+            "{memory_bank}/Features/"
+        ],
+        "context_files": [
+            "CLAUDE.md"
         ],
         "outputs": [
             f"{file_path} (updated with new sections)"
@@ -596,7 +631,7 @@ async def json_rpc_handler(request: JsonRpcRequest):
             "tools": [
                 {
                     "name": "init-project",
-                    "description": "Initialize the MemoryBank folder structure.",
+                    "description": "Initialize the memory bank folder structure (path configured in CLAUDE.md).",
                     "inputSchema": {"type": "object", "properties": {}}
                 },
                 {
@@ -744,7 +779,7 @@ async def json_rpc_handler(request: JsonRpcRequest):
                     "inputSchema": {
                         "type": "object",
                         "properties": {
-                            "file_path": {"type": "string", "description": "The path to the spec file to deep-dive into (e.g., MemoryBank/Features/01_SUBMITTED/FEAT-001-feature-name/FeatureDescription.md)"}
+                            "file_path": {"type": "string", "description": "The path to the spec file to deep-dive into (e.g., {memory_bank}/Features/01_SUBMITTED/FEAT-001-feature-name/FeatureDescription.md)"}
                         },
                         "required": ["file_path"]
                     }

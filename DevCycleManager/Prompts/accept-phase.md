@@ -44,11 +44,29 @@ This procedure is DONE when:
 
 ---
 
+## Phase 0: Resolve Memory Bank Path
+
+1. Read `CLAUDE.md` in the project root.
+2. Find the `## DevCycle Settings` section and extract `Memory Bank: <path>`.
+3. **If found** → set `{MEMORY_BANK_PATH}` = extracted path (e.g., `MemoryBank`).
+4. **If NOT found**:
+   - Ask the user: "Where should the Memory Bank folder be stored? (recommended: `MemoryBank`)"
+   - Wait for their response.
+   - Set `{MEMORY_BANK_PATH}` = user's chosen path.
+   - Append to `CLAUDE.md`:
+     ```
+     ## DevCycle Settings
+     Memory Bank: <chosen_path>
+     ```
+5. Use `{MEMORY_BANK_PATH}` as the base prefix for **all** file paths in this procedure.
+
+---
+
 ## Phase 1: Locate and Validate
 
 ### 1.1 Find Feature and Phase
 
-1. Search `MemoryBank/Features/03_IN_PROGRESS/` for `{{feature_id}}*`
+1. Search `{MEMORY_BANK_PATH}/Features/03_IN_PROGRESS/` for `{{feature_id}}*`
 2. Locate `Phases/phase-{{phase_number}}-*.md`
 3. Read: phase file, `FeatureTasks.md`, `FeatureDescription.md`, `start-feature-report-*.md`
 4. **If not found** → Stop and report error
