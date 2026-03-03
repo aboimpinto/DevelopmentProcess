@@ -39,7 +39,8 @@ This procedure is DONE when:
 - [ ] Incomplete tasks handled (SKIPPED with user justification, if any)
 - [ ] Phase marked COMPLETED in phase file, FeatureTasks.md, start-feature-report
 - [ ] Time metrics calculated (estimated vs actual)
-- [ ] Git commit created with achievements
+- [ ] Git commit created with achievements and all uncommitted files staged
+- [ ] Git push successful (or failure documented with remediation attempted)
 - [ ] Next phase previewed (or feature completion triggered if final)
 
 ---
@@ -184,7 +185,30 @@ If exists, update phase status table with COMPLETED and date.
 
 ## Phase 5: Git Commit and Push
 
-### 5.1 Commit
+### 5.1 Stage All Uncommitted Files (MANDATORY)
+
+Before commit, stage ALL uncommitted files:
+
+```bash
+git add -A
+```
+
+Validate with:
+
+```bash
+git status --short
+```
+
+Expected: all intended changes are staged, no required acceptance-change file left unstaged.
+
+### 5.2 Commit (MANDATORY)
+
+Build the commit message from actual completed work (not placeholders), including:
+- feature and phase
+- key achievements actually delivered
+- quality gate summary (build/tests/review)
+- time variance
+- files/docs updated
 
 ```
 feat({{feature_id}}): Complete Phase {{phase_number}} - {Phase Name}
@@ -199,7 +223,7 @@ Time: Estimated {est} → Actual {act} ({variance})
 Generated with Claude Code
 ```
 
-### 5.2 Push
+### 5.3 Push (MANDATORY)
 
 Push to remote. If push fails, attempt `git pull --rebase` then retry. Document push status.
 
@@ -258,7 +282,8 @@ All phases complete → inform user to run `complete-feature` to finalize.
 5. **Justify skips** — incomplete tasks need user-provided reasons
 6. **Update ALL files** — phase file, FeatureTasks.md, start-feature-report, checkpoint
 7. **Calculate metrics** — estimated vs actual with variance
-8. **Comprehensive commit** — achievements, metrics, quality status
+8. **Comprehensive commit** — stage all uncommitted files, include achievements/metrics/quality status
+9. **Push required** — every successful accept-phase must attempt push and record outcome
 
 ## Error Recovery
 
