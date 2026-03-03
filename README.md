@@ -18,6 +18,39 @@ A Model Context Protocol (MCP) server that guides AI assistants through a struct
 - **Server**: Stateless recipe book. Returns structured JSON instructions telling the client what to do.
 - **Client**: Local hands and eyes. Executes file operations, git commands, builds, tests, and LLM calls.
 
+## Universal Client Contract (All LLMs)
+
+`tools/call` is a successful MCP call even when it returns a procedure to execute.
+
+- The server returns:
+  - `result.structuredContent` (machine-readable, preferred)
+  - `result.content[0].text` (JSON string, backward-compatible)
+- For recipe tools (`submit-feature`, `continue-implementation`, `accept-phase`, etc.), expect:
+  - `status: "pending_execution"`
+  - `action: "execute_procedure"`
+  - `execution_owner: "client_llm"`
+  - `retry_same_tool: false`
+  - `next_action: "execute_returned_procedure"`
+
+### Required Client Behavior
+
+1. Call the MCP tool once.
+2. Read `structuredContent` first (fallback: parse `content[0].text` as JSON).
+3. If `status == "pending_execution"` and `action == "execute_procedure"`:
+   - execute the returned procedure locally (files, git, build/test, etc.)
+   - do not retry the same MCP call unless a procedure step explicitly asks for it
+4. If `status == "pending_action"`, perform the requested action.
+5. If `status == "error"`, treat as failure.
+
+### Minimal Decision Logic
+
+```text
+if status == "error": fail
+elif status == "pending_execution" and action == "execute_procedure": execute instructions locally
+elif status == "pending_action": perform requested action
+else: handle as standard success payload
+```
+
 ## Quick Start
 
 ### Build and Run

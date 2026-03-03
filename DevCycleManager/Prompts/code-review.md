@@ -42,6 +42,16 @@ This procedure is DONE when:
 
 ---
 
+## Execution Contract (Client Behavior)
+
+This MCP tool is recipe-oriented. A `pending_execution` response means the MCP call succeeded and returned steps for the client LLM to execute locally.
+
+- Execute this procedure locally (read/write files, run git commands as required)
+- Do not retry the same `code-review` MCP call unless a step explicitly asks for it
+- If a required command fails, report the failure with remediation and stop
+
+---
+
 ## Phase 0: Resolve Memory Bank Path
 
 1. Read `CLAUDE.md` in the project root.

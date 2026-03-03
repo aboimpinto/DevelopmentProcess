@@ -3,7 +3,7 @@
 <!--
 name: deep-dive
 purpose: Conduct intensive interview on a spec file to gather comprehensive details
-tools: Read, Write, AskUserQuestion
+tools: Read, Write, AskUserQuestion (optional)
 triggers: Spec file needs more detail before proceeding
 inputs: file_path
 outputs: Updated spec file with new sections appended
@@ -84,7 +84,8 @@ This procedure is DONE when:
 - **Start** with batches of 2-3 related questions to maintain flow
 - **Switch to one-at-a-time** when hitting complex topics (architecture decisions, edge cases, tradeoffs)
 - **Follow-up clarifications** are always one at a time
-- Use `AskUserQuestion` for EVERY question — never ask in plain text
+- If `AskUserQuestion` is available, use it for every interview question
+- If `AskUserQuestion` is NOT available, ask in plain text one by one (never all at once), include 2-4 concrete options, and allow free-form discussion
 
 ### Conversation Flow — Free-Flowing
 
@@ -106,6 +107,19 @@ This procedure is DONE when:
 
 - Offer 2-4 concrete alternatives to help the user think through options
 - Flag uncertain decisions: `[NEEDS VALIDATION] {assumption} — To validate: {what's needed}`
+
+### AskUserQuestion Fallback (Required)
+
+If `AskUserQuestion` is unavailable in the current client, explicitly switch to manual interview mode and continue:
+
+`can you please also conduct an interview with me and ask all the question that aren't answer. Do not assume anything, ask ... and do not ask all the questions at once but go one by one and provide option and a way to chat about the question`
+
+In this fallback mode:
+- Ask exactly one primary question per turn
+- Provide 2-4 concise options first, then include "or describe a different option"
+- Do not assume missing requirements; ask until clarified
+- Use follow-up probing one at a time for ambiguity
+- Keep a conversational path open so the user can discuss tradeoffs, not just pick options
 
 ---
 
@@ -259,7 +273,8 @@ Referenced Documents:
 
 ## Rules
 
-- Use `AskUserQuestion` for ALL questions — never ask in plain text output
+- Preferred: Use `AskUserQuestion` for all interview questions
+- Fallback: If `AskUserQuestion` is unavailable, run a manual one-by-one interview in plain text with options and free-form discussion
 - Probe vague answers until they become concrete
 - Read referenced documents immediately — do not note them for later
 - Keep conversation natural — do not robotically march through checklists

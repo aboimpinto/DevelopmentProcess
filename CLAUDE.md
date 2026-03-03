@@ -82,6 +82,27 @@ Features are folders in `MemoryBank/Features/` and their state is determined by 
 
 The server exposes a single JSON-RPC endpoint at `/` that handles `initialize`, `tools/list`, and `tools/call` methods.
 
+### Universal MCP Response Contract
+
+This server is recipe-oriented. `tools/call` returns procedures for the client to execute locally.
+
+- Preferred payload: `result.structuredContent`
+- Backward-compatible payload: `result.content[0].text` (JSON string)
+
+For procedure tools, the response includes deterministic orchestration fields:
+- `status: "pending_execution"`
+- `action: "execute_procedure"`
+- `execution_owner: "client_llm"`
+- `retry_same_tool: false`
+- `next_action: "execute_returned_procedure"`
+- `client_directive` with explicit non-retry guidance
+
+Client/orchestrator rule:
+1. Call tool once.
+2. If `pending_execution + execute_procedure`, execute instructions locally.
+3. Do not loop by re-calling the same tool unless explicitly required by a procedure step.
+4. Treat `status: "error"` as failure.
+
 ---
 
 ## MCP Commands Reference

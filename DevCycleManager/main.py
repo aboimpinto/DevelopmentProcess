@@ -500,7 +500,7 @@ async def run_code_review(feature_id: str, phase_number: int, feature_path: Opti
             "code-reviews/phase-{N}/Code-Review-{timestamp}-{STATUS}.md",
             "Phase checkpoint updated with review results"
         ],
-        "message": "Execute the code-review procedure. This performs a comprehensive review of all phase changes against CodeGuidelines, generates a detailed report with APPROVED/APPROVED_WITH_NOTES/NEEDS_CHANGES status, and updates the phase checkpoint."
+        "message": "Execute the code-review procedure locally. `pending_execution` is expected and means the MCP call succeeded with a recipe to run. Do not retry the same code-review MCP call unless a procedure step explicitly requires it."
     }
 
 async def run_complete_feature(feature_id: str, feature_path: Optional[str] = None) -> dict:
@@ -614,6 +614,43 @@ class JsonRpcResponse(BaseModel):
 # --- FastAPI App ---
 app = FastAPI(title="DevCycleManager (Remote Process)")
 
+
+def enrich_execution_contract(result: dict, tool_name: str) -> dict:
+    """
+    Add deterministic orchestration hints so any MCP client can act consistently.
+    Keeps existing payload shape while adding machine-readable contract fields.
+    """
+    if not isinstance(result, dict):
+        return result
+
+    status_value = result.get("status")
+
+    # Common metadata for all tool responses
+    result.setdefault("contract_version", "1.0")
+    result.setdefault("tool_name", tool_name)
+
+    if status_value == "pending_execution":
+        # This is a successful tool call that returns a recipe for client-side execution.
+        result.setdefault("tool_call_success", True)
+        result.setdefault("execution_owner", "client_llm")
+        result.setdefault("retry_same_tool", False)
+        result.setdefault("next_action", "execute_returned_procedure")
+        result.setdefault(
+            "client_directive",
+            "Execute the returned procedure locally. Do not retry this same MCP call unless a step explicitly requires it.",
+        )
+    elif status_value == "pending_action":
+        result.setdefault("tool_call_success", True)
+        result.setdefault("execution_owner", "client_llm")
+        result.setdefault("retry_same_tool", False)
+        result.setdefault("next_action", "perform_requested_action")
+    elif status_value == "error":
+        result.setdefault("tool_call_success", False)
+    else:
+        result.setdefault("tool_call_success", True)
+
+    return result
+
 @app.post("/", response_model=JsonRpcResponse, response_model_exclude_none=True)
 async def json_rpc_handler(request: JsonRpcRequest):
     if request.id is None:
@@ -622,7 +659,7 @@ async def json_rpc_handler(request: JsonRpcRequest):
     if request.method == "initialize":
         return JsonRpcResponse(id=request.id, result={
             "protocolVersion": "2024-11-05",
-            "serverInfo": {"name": "DevCycleManager", "version": "0.2.0-remote"},
+            "serverInfo": {"name": "DevCycleManager", "version": "0.2.1-remote"},
             "capabilities": {"tools": {"listChanged": False}}
         })
 
@@ -862,9 +899,20 @@ async def json_rpc_handler(request: JsonRpcRequest):
                 )
             else:
                 raise ValueError(f"Unknown tool: {tool_name}")
-            
-            # The result is now a DICTIONARY of instructions, not just a string
-            return JsonRpcResponse(id=request.id, result={"content": [{"type": "text", "text": json.dumps(result, indent=2)}]})
+
+            result = enrich_execution_contract(result, tool_name)
+
+            # Backward compatible:
+            # - `content[0].text` keeps existing clients working.
+            # - `structuredContent` gives deterministic machine-readable data for robust orchestration.
+            return JsonRpcResponse(
+                id=request.id,
+                result={
+                    "content": [{"type": "text", "text": json.dumps(result, indent=2)}],
+                    "structuredContent": result,
+                    "isError": result.get("status") == "error"
+                }
+            )
         
         except Exception as e:
             return JsonRpcResponse(id=request.id, error={"code": -32603, "message": str(e)})

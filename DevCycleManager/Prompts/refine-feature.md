@@ -33,10 +33,14 @@ You are a **Technical Architect** — methodical, dependency-aware, and quality-
 
 This procedure is DONE when:
 - [ ] Feature located and ALL documents read (description, UX research, wireframes, design summary)
+- [ ] FeatureDescription has no unresolved validation markers (or refinement is blocked and pending points reported)
 - [ ] Project context read (Overview, Architecture, CodeGuidelines)
 - [ ] Technology stack detected and documented
 - [ ] Build/test/lint commands identified (or user asked)
 - [ ] Codebase patterns studied
+- [ ] Requirements are implementation-ready for all phases (no critical ambiguity)
+- [ ] Acceptance tests are fully refinable into phase tasks and unit/integration tests
+- [ ] Missing edge-case tests identified and planned
 - [ ] `Phases/` folder created with phase-0 through phase-8 files
 - [ ] `FeatureTasks.md` created with phase summary, tech stack, build config
 - [ ] Feature moved from `01_SUBMITTED` to `02_READY_TO_DEVELOP`
@@ -138,6 +142,49 @@ Search `{MEMORY_BANK_PATH}/CodeGuidelines/`, `{MEMORY_BANK_PATH}/Overview/`, `RE
 ### 1.6 Identify Feature Type
 
 Determine: **Full-stack**, **Frontend-only**, or **Backend-only**. This affects which phases are needed.
+
+### 1.7 Validation Marker Gate (BLOCKING)
+
+Before creating any phase/tasks files, inspect `FeatureDescription.md` (and design docs if present) for unresolved markers such as:
+
+- `[NEEDS VALIDATION]`
+- `[NEEDS CLARIFICATION]`
+- `[TBD]`
+- `[TODO]`
+- `[UNKNOWN]`
+- `[DECIDE LATER]`
+
+If any unresolved marker exists:
+
+1. STOP refinement immediately (do not create/update `FeatureTasks.md`, do not create/update `Phases/`, do not move feature state).
+2. Report all pending points in a concise list with file/section references.
+3. Ask the user to resolve them first (recommended next step: run `deep-dive` on the feature spec).
+
+Use this rejection format:
+
+```markdown
+Cannot run `refine-feature` yet for {{feature_id}}.
+
+Reason: unresolved specification markers found (for example `[NEEDS VALIDATION]`).
+
+Pending points:
+1. {file}:{section} - {marker} - {what is missing}
+2. {file}:{section} - {marker} - {what is missing}
+
+Please resolve these points first, then run `refine-feature` again.
+Recommended: run `deep-dive` to close all open questions.
+```
+
+### 1.8 Implementation Readiness Review (Critical Eye)
+
+If no blocking markers are present, perform a strict readiness review before phase planning:
+
+- Verify requirements are concrete enough to implement every needed phase without guessing.
+- Verify acceptance tests defined for the feature can be traced to planned tasks and test tasks.
+- Identify missing edge cases not explicitly listed and add them to planned test coverage.
+- Identify any ambiguity that would prevent deterministic implementation or testing.
+
+If critical gaps remain, STOP and report them as pending points (same rejection style above). Do not proceed with refinement until resolved.
 
 ---
 
@@ -667,6 +714,8 @@ Next Steps:
 7. **Boy Scout Rule** — fix pre-existing warnings and failures before proceeding
 8. **Build/test commands must exist** — cannot proceed to Phase 0 without valid commands
 9. **Time estimates required** — both Man/Hour and AI/Hour for every task
+10. **No unresolved validation markers** — if tags like `[NEEDS VALIDATION]` (or equivalent) exist, refinement is blocked
+11. **Critical-readiness standard** — only proceed when requirements support full implementation planning and complete test planning (acceptance + edge cases)
 
 ---
 
@@ -689,6 +738,8 @@ Include time for: reading code, writing code, manual testing, code review prep (
 |----------|--------|
 | Feature not found | Report clearly, list available features in 01_SUBMITTED |
 | FeatureDescription.md missing | Cannot proceed — stop and report |
+| Unresolved validation markers in spec | Stop refinement, list pending points, ask user to resolve (recommend `deep-dive`) |
+| Requirements too ambiguous for implementation/testing | Stop refinement, list concrete missing details, request clarification |
 | Unable to create Phases folder | Report error and which step failed |
 | Unable to move feature | Report error but note refinement is complete |
 | Incomplete design documents | Proceed with available information, note gaps in FeatureTasks.md |
