@@ -5,7 +5,7 @@ name: continue-implementation
 purpose: Orchestrate task-by-task implementation of an IN_PROGRESS feature
 tools: Read, Write, Edit, Bash (build/test/lint/git), Glob, Grep
 triggers: After start-feature, or to resume work on an existing feature
-inputs: feature_id, feature_path (optional)
+inputs: feature_id, feature_path (optional), mode (optional)
 outputs: Updated phase files, FeatureTasks.md, code-reviews/, LessonsLearned/
 related: start-feature, code-review, accept-phase, complete-feature
 -->
@@ -14,6 +14,7 @@ related: start-feature, code-review, accept-phase, complete-feature
 
 - **Feature ID**: {{feature_id}}
 - **Feature Path**: {{feature_path}}
+- **Mode**: {{mode}}
 
 ---
 
@@ -33,13 +34,17 @@ You are a **Senior Implementation Lead** — methodical, quality-obsessed, and d
 
 This procedure is DONE when:
 - [ ] Current state identified (entry point determined)
+- [ ] Phase status synchronized in BOTH phase file and FeatureTasks.md (PENDING/IN_PROGRESS/AWAITING_USER_ACCEPTANCE)
 - [ ] All tasks in current phase implemented following Gherkin specs
+- [ ] Each task status maintained in real time (PENDING -> IN_PROGRESS -> COMPLETED/SKIPPED)
+- [ ] Required context documents read in order at each task start/resume
 - [ ] Git commits tracked in both task-level and phase-level tables
 - [ ] Build: 0 errors, 0 warnings
 - [ ] Tests: 100% passing
 - [ ] Lint: 0 errors, 0 warnings (if configured)
 - [ ] Code review: APPROVED (for code-relevant phases)
 - [ ] LessonsLearned document created for the phase
+- [ ] Checkpoint status maintained in real time (NOT STARTED -> IN_PROGRESS -> COMPLETE)
 - [ ] Phase status set to AWAITING_USER_ACCEPTANCE
 - [ ] User acceptance requested
 
@@ -100,7 +105,28 @@ Read `FeatureTasks.md` and the current phase file to determine entry point:
 | **Mid-Phase** | Some tasks COMPLETED, one IN_PROGRESS | Continue current task |
 | **Checkpoint Pending** | All tasks COMPLETED, checkpoint not filled | Go to Phase 4 |
 | **Validation Failed** | Checkpoint InProgress with failures | Fix issues, re-validate |
+| **Finalization Reconciliation Needed** | Tasks complete + checkpoint complete + review approved + gates pass, but phase/FeatureTasks status not AWAITING_USER_ACCEPTANCE | Run Phase 5.6 immediately |
 | **Awaiting Acceptance** | Phase AWAITING_USER_ACCEPTANCE | Present summary, wait for user |
+
+### 2.1 Mandatory State Synchronization (Before Any Work)
+
+Before implementing any task, synchronize status across BOTH:
+- Current phase file (`Phases/phase-{N}-*.md`)
+- `FeatureTasks.md` Phase Summary row for Phase {N}
+
+Rules:
+1. If work is starting/resuming on this phase, phase status MUST be `IN_PROGRESS` in both files.
+2. If all tasks are complete and validation is running, checkpoint status MUST be `IN_PROGRESS`.
+3. If validation passes and waiting for user, phase status MUST be `AWAITING_USER_ACCEPTANCE`.
+4. Never leave a task as `PENDING` while actively implementing it.
+5. If all completion conditions are already true, run the finalization reconciliation branch (Phase 5.6) instead of re-implementing tasks.
+
+If phase status differs between files, fix both immediately before continuing.
+
+### 2.2 Optional Mode Override
+
+If `Mode` is `finalize_current_phase`, skip task execution and go directly to Phase 5 for validation + reconciliation.
+Use this when tasks/checkpoint/review are done but statuses were not finalized.
 
 ---
 
@@ -182,18 +208,38 @@ For each task in the current phase:
 
 ### 4.1 Start Task
 
-Update task in phase file:
+FIRST update task status (before writing code):
 ```markdown
 **Status**: `[IN_PROGRESS]`
 **Work Started**: {timestamp}
 ```
 
+Also update task tracking in `FeatureTasks.md` if a task-level tracker exists for this phase.
+
+Then choose the next task deterministically:
+- Continue the task already marked `[IN_PROGRESS]`, OR
+- Start the first task marked `[PENDING]`
+
 ### 4.2 Gather Task Context
 
-Collect:
+Read context in this exact order for EACH task start/resume:
+1. **Parent Epic** (if linked in FeatureDescription)
+2. **Epic AcceptanceTests** (if present)
+3. **Epic baseline design** (if present)
+4. **FeatureDescription.md** (required)
+5. **UX-research-report.md** (if present)
+6. **Wireframes-design.md** (if present)
+7. **All referenced features (FEAT-XXX)**, whether implemented or not
+
+Then collect task-specific implementation context:
 1. **Requirements**: User story, Gherkin specs, data requirements, business rules
 2. **Design context**: `design-summary.md`, `UX-research-report.md`, `Phases/code-samples/`
 3. **Standards**: `{MEMORY_BANK_PATH}/CodeGuidelines/`
+
+Implementation notes:
+- If an optional source is missing, note `N/A` and continue.
+- For referenced FEATs, read at least `FeatureDescription.md` and `FeatureTasks.md` (and relevant phase files when dependency details are needed).
+- Do not start implementation until this context pass is complete and summarized briefly in task notes.
 
 ### 4.3 Implement
 
@@ -245,6 +291,7 @@ After EVERY commit, update TWO tables:
 
 ### 4.6 Complete Task
 
+When implementation/tests for this task are finished, update status immediately:
 ```markdown
 **Status**: `[COMPLETED]`
 **Work Completed**: {timestamp}
@@ -252,6 +299,13 @@ After EVERY commit, update TWO tables:
 ```
 
 Verify Git Commits table has entries before marking complete.
+
+If task is intentionally not implemented, mark:
+```markdown
+**Status**: `[SKIPPED]`
+**Skip Reason**: {user-approved reason}
+**Skip Date**: {timestamp}
+```
 
 ### 4.7 Next Task
 
@@ -306,12 +360,16 @@ If still NEEDS_CHANGES after 3 cycles → inform user, request intervention.
 
 ### 5.4 Fill Phase Checkpoint
 
+Before running final validation commands, set checkpoint status to `IN_PROGRESS`.
+
 Update the phase file's checkpoint section:
 - Build Verification status
 - Test Coverage status
 - Standards Compliance status
 - Time Tracking Summary
 - Code Review History (all iterations)
+
+After all quality gates pass, set checkpoint status to `Complete`.
 
 ### 5.5 Calculate Times and Update Status
 
@@ -323,6 +381,27 @@ Update the phase file's checkpoint section:
 ```
 
 Update FeatureTasks.md Phase Summary.
+
+### 5.6 Phase-Finalization Reconciliation (MANDATORY)
+
+After Phase 5.1-5.5 checks pass, enforce final status synchronization:
+
+1. Verify all conditions:
+   - all phase tasks are `COMPLETED` or `SKIPPED` (with justification)
+   - checkpoint is `Complete`
+   - latest code review is `APPROVED` or `APPROVED_WITH_NOTES` (if required)
+   - build/tests/lint gates pass
+2. If all conditions pass:
+   - set phase file status to `AWAITING_USER_ACCEPTANCE`
+   - set `FeatureTasks.md` phase row status to `AWAITING_USER_ACCEPTANCE`
+   - ensure checkpoint status is `Complete`
+3. If any status mismatch remains after reconciliation, STOP with a blocking error and list exact mismatches.
+4. Generate and present an acceptance summary with:
+   - achievements
+   - quality gates result
+   - code review result
+   - lessons learned path
+5. Return: `Phase {N} complete — awaiting user acceptance`.
 
 ---
 
@@ -386,17 +465,18 @@ Present phase completion summary:
 **WAIT** for user response. Do not proceed without explicit acceptance.
 
 ### On Acceptance
-1. Update phase status to COMPLETED
-2. Update FeatureTasks.md with COMPLETED status and actual times
-3. Create git commit: `feat({feature_id}): Complete Phase {N} - {Name}`
-4. Push to remote
+1. Instruct user to run `accept-phase` to formalize acceptance
+2. Do NOT mark phase as COMPLETED in this procedure
+3. Do NOT create the phase-completion commit here
+4. Keep status as `AWAITING_USER_ACCEPTANCE` until `accept-phase` runs
 5. Preview next phase (do NOT auto-start)
 
 ### On Rejection
 1. Document feedback in phase notes
-2. Revert status to IN_PROGRESS
-3. Address feedback, re-run validation
-4. Request acceptance again
+2. Revert status to `IN_PROGRESS`
+3. Update `FeatureTasks.md` phase row back to `IN_PROGRESS`
+4. Address feedback, re-run validation
+5. Request acceptance again
 
 ---
 
@@ -429,6 +509,8 @@ Every phase MUST pass before acceptance:
 | Phase files missing | "Phase file not found. Run refine-feature first." |
 | Build command not configured | Ask user for the command |
 | Max retries exceeded (3) | Inform user, request manual intervention |
+| Status mismatch between phase file and FeatureTasks.md | Stop and resync both files before continuing |
+| Tasks/checkpoint/review done but status not AWAITING_USER_ACCEPTANCE | Run Phase 5.6 reconciliation and sync both files |
 
 ---
 

@@ -354,7 +354,7 @@ async def run_start_feature(feature_id: str, feature_path: Optional[str] = None)
         "message": "Execute the start-feature procedure. This validates the feature (pre-validation + post-validation), creates a git branch, and moves the feature to 03_IN_PROGRESS. If pre-validation fails, the process STOPS with a rejection report."
     }
 
-async def run_continue_implementation(feature_id: str, feature_path: Optional[str] = None) -> dict:
+async def run_continue_implementation(feature_id: str, feature_path: Optional[str] = None, mode: Optional[str] = None) -> dict:
     """
     The Recipe for continuing feature implementation.
     Orchestrates the systematic implementation of an IN_PROGRESS feature:
@@ -378,6 +378,7 @@ async def run_continue_implementation(feature_id: str, feature_path: Optional[st
     # Replace placeholders with actual values
     procedure = procedure_template.replace("{{feature_id}}", feature_id or "")
     procedure = procedure.replace("{{feature_path}}", feature_path or "[Not provided - search in {MEMORY_BANK_PATH}/Features/ as defined in CLAUDE.md]")
+    procedure = procedure.replace("{{mode}}", mode or "[Not provided - default auto-detect]")
 
     return {
         "status": "pending_execution",
@@ -401,7 +402,7 @@ async def run_continue_implementation(feature_id: str, feature_path: Optional[st
             "LessonsLearned/{feature_id}/Phase-{N}-{name}.md",
             "feature-completion-report.md (when all phases complete)"
         ],
-        "message": "Execute the continue-implementation procedure. This orchestrates task execution, quality gates (build/test/review), phase completion with user acceptance, and LessonsLearned documentation. Resume from current state automatically."
+        "message": "Execute the continue-implementation procedure locally. Mandatory: keep status synchronized in phase file + FeatureTasks.md (phase: IN_PROGRESS/AWAITING_USER_ACCEPTANCE, task: PENDING->IN_PROGRESS->COMPLETED/SKIPPED, checkpoint: NOT STARTED->IN_PROGRESS->COMPLETE). Optional mode: finalize_current_phase for explicit finalization reconciliation."
     }
 
 async def run_accept_phase(feature_id: str, phase_number: int, feature_path: Optional[str] = None) -> dict:
@@ -767,7 +768,8 @@ async def json_rpc_handler(request: JsonRpcRequest):
                         "type": "object",
                         "properties": {
                             "feature_id": {"type": "string", "description": "The feature ID (e.g., FEAT-001) to continue implementing"},
-                            "feature_path": {"type": "string", "description": "Optional: Direct path to the feature folder if known"}
+                            "feature_path": {"type": "string", "description": "Optional: Direct path to the feature folder if known"},
+                            "mode": {"type": "string", "description": "Optional: set to 'finalize_current_phase' to force validation + phase-finalization reconciliation when tasks are done but statuses are not synchronized"}
                         },
                         "required": ["feature_id"]
                     }
@@ -874,7 +876,8 @@ async def json_rpc_handler(request: JsonRpcRequest):
             elif tool_name == "continue-implementation":
                 result = await run_continue_implementation(
                     feature_id=tool_args.get("feature_id"),
-                    feature_path=tool_args.get("feature_path")
+                    feature_path=tool_args.get("feature_path"),
+                    mode=tool_args.get("mode")
                 )
             elif tool_name == "accept-phase":
                 result = await run_accept_phase(
