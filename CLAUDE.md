@@ -417,8 +417,10 @@ LLM: Invokes start-feature with feature_id="FEAT-001"
 
 **What It Does**:
 - Identifies current state (which phase, which task)
+- During Phase 1, creates or refreshes the canonical feature-level planning document: `planning-analysis-report.md`
 - For each task:
   - Gathers task context and requirements
+  - Reads `planning-analysis-report.md` in Phases 2-8 instead of re-doing phase planning
   - Guides implementation following Gherkin specs
   - Runs build and tests
   - **Tracks git commits** in task and phase tables

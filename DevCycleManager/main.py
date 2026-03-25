@@ -359,11 +359,12 @@ async def run_continue_implementation(feature_id: str, feature_path: Optional[st
     The Recipe for continuing feature implementation.
     Orchestrates the systematic implementation of an IN_PROGRESS feature:
     1. Discovers current state (feature, phase, task)
-    2. Executes tasks following specifications
-    3. Manages quality (build, tests, code-review)
-    4. Tracks progress (update phase files, FeatureTasks.md)
-    5. Requests user acceptance for phase completion
-    6. Creates LessonsLearned documents per phase
+    2. Creates/refines the canonical Phase 1 planning document
+    3. Executes tasks following specifications
+    4. Manages quality (build, tests, code-review)
+    5. Tracks progress (update phase files, FeatureTasks.md)
+    6. Requests user acceptance for phase completion
+    7. Creates LessonsLearned documents per phase
     """
     # Load the procedure template
     try:
@@ -398,11 +399,12 @@ async def run_continue_implementation(feature_id: str, feature_path: Optional[st
         "outputs": [
             "Phase updates in Phases/*.md",
             "FeatureTasks.md updates",
+            "planning-analysis-report.md (canonical Phase 1 planning artifact)",
             "code-reviews/phase-{N}/*.md",
             "LessonsLearned/{feature_id}/Phase-{N}-{name}.md",
             "feature-completion-report.md (when all phases complete)"
         ],
-        "message": "Execute the continue-implementation procedure locally. Mandatory: keep status synchronized in phase file + FeatureTasks.md (phase: IN_PROGRESS/AWAITING_USER_ACCEPTANCE, task: PENDING->IN_PROGRESS->COMPLETED/SKIPPED, checkpoint: NOT STARTED->IN_PROGRESS->COMPLETE). Optional mode: finalize_current_phase for explicit finalization reconciliation."
+        "message": "Execute the continue-implementation procedure locally. FIRST write operation when entering a PENDING phase: set phase status IN_PROGRESS in BOTH phase file and FeatureTasks.md before any task work. During Phase 1, create or refresh the canonical feature-root planning document `planning-analysis-report.md`; later phases must read and reuse it instead of re-planning. Keep all statuses synchronized (task: PENDING->IN_PROGRESS->COMPLETED/SKIPPED, checkpoint: NOT STARTED->IN_PROGRESS->COMPLETE). Optional mode: finalize_current_phase."
     }
 
 async def run_accept_phase(feature_id: str, phase_number: int, feature_path: Optional[str] = None) -> dict:
@@ -551,7 +553,7 @@ async def run_complete_feature(feature_id: str, feature_path: Optional[str] = No
             "Feature folder moved to 04_COMPLETED/",
             "Git commit with completion details"
         ],
-        "message": "Execute the complete-feature procedure. This validates all phases are complete, compiles Lessons Learned (asks user for additional input), creates completion reports, and moves the feature to 04_COMPLETED. REQUIRES USER CONFIRMATION before moving."
+        "message": "Execute the complete-feature procedure. This validates all phases are complete, compiles Lessons Learned (asks user for additional input), creates completion reports, and moves the feature to 04_COMPLETED. Running this command is confirmation to proceed (no extra yes/no gate)."
     }
 
 async def run_deep_dive(file_path: str) -> dict:
@@ -763,7 +765,7 @@ async def json_rpc_handler(request: JsonRpcRequest):
                 },
                 {
                     "name": "continue-implementation",
-                    "description": "Continue implementing an IN_PROGRESS feature. Orchestrates task execution, quality gates (build/test/review), phase completion with user acceptance, and creates LessonsLearned documents. Automatically resumes from current state.",
+                    "description": "Continue implementing an IN_PROGRESS feature. Phase 1 creates or refreshes the canonical `planning-analysis-report.md`; later phases must read and reuse it instead of re-planning. Also orchestrates task execution, quality gates (build/test/review), phase completion with user acceptance, and LessonsLearned documents. Automatically resumes from current state.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
@@ -802,7 +804,7 @@ async def json_rpc_handler(request: JsonRpcRequest):
                 },
                 {
                     "name": "complete-feature",
-                    "description": "Complete a feature and move to COMPLETED state. Validates all phases done, compiles Lessons Learned (asks user for input), creates completion reports, and moves feature to 04_COMPLETED. REQUIRES USER CONFIRMATION.",
+                    "description": "Complete a feature and move to COMPLETED state. Validates all phases done, compiles Lessons Learned (asks user for input), creates completion reports, and moves feature to 04_COMPLETED. Invocation is treated as confirmation to proceed.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {

@@ -138,7 +138,7 @@ Features flow through state folders in `MemoryBank/Features/`:
 |---------|---------|
 | `refine-feature` | Transform a feature into a phased implementation plan (9 phases, tasks with Gherkin specs). Moves to `02_READY_TO_DEVELOP/` |
 | `start-feature` | Validate documentation, create git branch, move to `03_IN_PROGRESS/`. Rejects if docs are incomplete or ambiguous |
-| `continue-implementation` | Orchestrate task-by-task implementation — build, test, commit tracking, code review, lessons learned |
+| `continue-implementation` | Orchestrate task-by-task implementation; Phase 1 creates canonical `planning-analysis-report.md`, later phases reuse it; build, test, commit tracking, code review, lessons learned |
 
 ### Quality and Completion
 

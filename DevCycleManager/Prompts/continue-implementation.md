@@ -6,7 +6,7 @@ purpose: Orchestrate task-by-task implementation of an IN_PROGRESS feature
 tools: Read, Write, Edit, Bash (build/test/lint/git), Glob, Grep
 triggers: After start-feature, or to resume work on an existing feature
 inputs: feature_id, feature_path (optional), mode (optional)
-outputs: Updated phase files, FeatureTasks.md, code-reviews/, LessonsLearned/
+outputs: Updated phase files, FeatureTasks.md, planning-analysis-report.md, code-reviews/, LessonsLearned/
 related: start-feature, code-review, accept-phase, complete-feature
 -->
 
@@ -35,9 +35,11 @@ You are a **Senior Implementation Lead** — methodical, quality-obsessed, and d
 This procedure is DONE when:
 - [ ] Current state identified (entry point determined)
 - [ ] Phase status synchronized in BOTH phase file and FeatureTasks.md (PENDING/IN_PROGRESS/AWAITING_USER_ACCEPTANCE)
+- [ ] Canonical planning document `planning-analysis-report.md` created or refreshed during Phase 1
 - [ ] All tasks in current phase implemented following Gherkin specs
 - [ ] Each task status maintained in real time (PENDING -> IN_PROGRESS -> COMPLETED/SKIPPED)
 - [ ] Required context documents read in order at each task start/resume
+- [ ] Later phases reuse `planning-analysis-report.md` instead of creating new per-phase planning files
 - [ ] Git commits tracked in both task-level and phase-level tables
 - [ ] Build: 0 errors, 0 warnings
 - [ ] Tests: 100% passing
@@ -101,12 +103,24 @@ Read `FeatureTasks.md` and the current phase file to determine entry point:
 
 | Entry Point | Detection | Action |
 |-------------|-----------|--------|
+| **Phase Not Activated** | Current phase status is `PENDING` but this phase is now the active implementation target | Run Phase 2.0 immediately (activate to IN_PROGRESS) |
 | **Fresh Start** | Phase IN_PROGRESS, no tasks started | Start first task |
 | **Mid-Phase** | Some tasks COMPLETED, one IN_PROGRESS | Continue current task |
 | **Checkpoint Pending** | All tasks COMPLETED, checkpoint not filled | Go to Phase 4 |
 | **Validation Failed** | Checkpoint InProgress with failures | Fix issues, re-validate |
 | **Finalization Reconciliation Needed** | Tasks complete + checkpoint complete + review approved + gates pass, but phase/FeatureTasks status not AWAITING_USER_ACCEPTANCE | Run Phase 5.6 immediately |
 | **Awaiting Acceptance** | Phase AWAITING_USER_ACCEPTANCE | Present summary, wait for user |
+
+### 2.0 Phase Activation (FIRST WRITE OPERATION, MANDATORY)
+
+If the active phase status is `PENDING`, do this BEFORE any task execution, context collection, or code changes:
+
+1. Update phase file top-level status to `IN_PROGRESS`
+2. Update `FeatureTasks.md` phase summary row status to `IN_PROGRESS`
+3. Record activation timestamp in phase notes/checkpoint metadata
+4. Save both files
+
+Do not proceed to Phase 4 until both files reflect `IN_PROGRESS`.
 
 ### 2.1 Mandatory State Synchronization (Before Any Work)
 
@@ -120,6 +134,7 @@ Rules:
 3. If validation passes and waiting for user, phase status MUST be `AWAITING_USER_ACCEPTANCE`.
 4. Never leave a task as `PENDING` while actively implementing it.
 5. If all completion conditions are already true, run the finalization reconciliation branch (Phase 5.6) instead of re-implementing tasks.
+6. If phase file shows `PENDING` while any task is `IN_PROGRESS` or `COMPLETED`, immediately repair status to `IN_PROGRESS` in both files.
 
 If phase status differs between files, fix both immediately before continuing.
 
@@ -133,6 +148,17 @@ Use this when tasks/checkpoint/review are done but statuses were not finalized.
 ## Phase 3: Special Handling — Phase 1 (Planning & Analysis)
 
 **If current phase is Phase 1**, this is analysis-only — NO CODE is written.
+
+### 3.0 Canonical Planning Document
+
+The feature-level planning artifact uses one mandatory canonical filename:
+- `planning-analysis-report.md`
+
+Rules:
+1. Create it in the feature root folder, beside `FeatureDescription.md` and `FeatureTasks.md`.
+2. Always use this exact filename. Do not invent alternatives such as `phase-1-plan.md`, `implementation-plan.md`, `planning.md`, or `analysis-report.md`.
+3. If a legacy planning file with a different name already exists, consolidate its useful content into `planning-analysis-report.md` and continue using only the canonical file.
+4. Phases 2-8 must read `planning-analysis-report.md` before task execution and must not re-do planning for their own phase.
 
 ### 3.1 Classify Implementation Types
 
@@ -177,16 +203,25 @@ For each task in subsequent phases, add:
 
 For complex tasks, create code sample files in `Phases/code-samples/task-{N}-{M}-{name}.md`.
 
-### 3.5 Create Planning Analysis Report
+### 3.5 Create or Refresh Canonical Planning Analysis Report
 
-Save `planning-analysis-report.md` with:
+Create or update the feature-root file `planning-analysis-report.md` with:
 - Executive summary of implementation approach
 - Implementation type distribution table
 - Key patterns identified with sources
+- Phase-by-phase implementation guidance table
 - Risk assessment table (risk, likelihood, impact, mitigation)
 - Dependencies identified
 - Tasks enriched summary
 - Estimated impact on timeline
+
+The phase-by-phase implementation guidance table must cover, at minimum:
+- Phase number and name
+- Key decisions already made in Phase 1
+- Expected files/modules to touch
+- Dependencies and prerequisites
+- Testing focus
+- Notes for follow-up phases so they can execute without re-planning
 
 ### 3.6 Phase 1 Completion Checks
 
@@ -195,7 +230,7 @@ Before completing Phase 1, verify:
 - [ ] CodeGuidelines/Architecture/LessonsLearned summaries created
 - [ ] Codebase searched for reusable patterns
 - [ ] Tasks enriched with implementation guidance or code sample references
-- [ ] Planning Analysis Report created
+- [ ] `planning-analysis-report.md` exists in the feature root with the canonical filename
 - [ ] **No code written** — Phase 1 is analysis only
 
 When complete → proceed to Phase 4 (Phase Completion).
@@ -220,6 +255,9 @@ Then choose the next task deterministically:
 - Continue the task already marked `[IN_PROGRESS]`, OR
 - Start the first task marked `[PENDING]`
 
+Precondition check:
+- If phase status is not `IN_PROGRESS` at this moment, STOP and run Phase 2.0 + 2.1 synchronization first.
+
 ### 4.2 Gather Task Context
 
 Read context in this exact order for EACH task start/resume:
@@ -229,16 +267,21 @@ Read context in this exact order for EACH task start/resume:
 4. **FeatureDescription.md** (required)
 5. **UX-research-report.md** (if present)
 6. **Wireframes-design.md** (if present)
-7. **All referenced features (FEAT-XXX)**, whether implemented or not
+7. **design-summary.md** (if present)
+8. **planning-analysis-report.md** (required for Phases 2-8; create/refresh it during Phase 1)
+9. **All referenced features (FEAT-XXX)**, whether implemented or not
 
 Then collect task-specific implementation context:
 1. **Requirements**: User story, Gherkin specs, data requirements, business rules
-2. **Design context**: `design-summary.md`, `UX-research-report.md`, `Phases/code-samples/`
+2. **Design context**: `design-summary.md`, `UX-research-report.md`, `Phases/code-samples/`, `planning-analysis-report.md`
 3. **Standards**: `{MEMORY_BANK_PATH}/CodeGuidelines/`
 
 Implementation notes:
 - If an optional source is missing, note `N/A` and continue.
 - For referenced FEATs, read at least `FeatureDescription.md` and `FeatureTasks.md` (and relevant phase files when dependency details are needed).
+- For Phases 2-8, `planning-analysis-report.md` is mandatory context. Do not create a new phase-specific planning file or redo planning from scratch.
+- If `planning-analysis-report.md` is missing in Phase 2-8, first search the feature folder for legacy planning filenames and consolidate them into `planning-analysis-report.md`. If none exist, reconstruct the document from the Phase 1 file plus feature/design docs before proceeding.
+- If later implementation changes a material architectural or sequencing decision, update `planning-analysis-report.md` in place instead of creating a new planning artifact.
 - Do not start implementation until this context pass is complete and summarized briefly in task notes.
 
 ### 4.3 Implement
@@ -510,6 +553,7 @@ Every phase MUST pass before acceptance:
 | Build command not configured | Ask user for the command |
 | Max retries exceeded (3) | Inform user, request manual intervention |
 | Status mismatch between phase file and FeatureTasks.md | Stop and resync both files before continuing |
+| `planning-analysis-report.md` missing in Phase 2+ | Consolidate legacy planning files into the canonical filename, or reconstruct it from Phase 1 artifacts before coding |
 | Tasks/checkpoint/review done but status not AWAITING_USER_ACCEPTANCE | Run Phase 5.6 reconciliation and sync both files |
 
 ---
