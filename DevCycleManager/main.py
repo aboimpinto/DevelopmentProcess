@@ -260,7 +260,7 @@ async def run_refine_feature(feature_id: str, feature_path: Optional[str] = None
     """
     The Recipe for refining a feature into implementable tasks.
     Transforms a feature from 01_SUBMITTED to 02_READY_TO_DEVELOP by:
-    1. Analyzing all feature documents
+    1. Analyzing all feature-folder documents plus linked epic/dependency context
     2. Creating phased implementation plan
     3. Breaking down into independent tasks with unit tests
     4. Adding checkpoints with quality gates
@@ -288,8 +288,11 @@ async def run_refine_feature(feature_id: str, feature_path: Optional[str] = None
             "{memory_bank}/Overview/",
             "{memory_bank}/Architecture/",
             "{memory_bank}/CodeGuidelines/",
+            "{memory_bank}/Features/00_EPICS/",
             "{memory_bank}/Features/01_SUBMITTED/",
-            "{memory_bank}/Features/02_READY_TO_DEVELOP/"
+            "{memory_bank}/Features/02_READY_TO_DEVELOP/",
+            "{memory_bank}/Features/03_IN_PROGRESS/",
+            "{memory_bank}/Features/04_COMPLETED/"
         ],
         "context_files": [
             "CLAUDE.md"
@@ -306,10 +309,10 @@ async def run_refine_feature(feature_id: str, feature_path: Optional[str] = None
             "Phases/phase-7-testing-polish.md",
             "Phases/phase-8-final-checkpoint.md"
         ],
-        "message": "Execute the refine-feature procedure. This creates a phased implementation plan with tasks, unit tests, and quality checkpoints. The feature will be moved to 02_READY_TO_DEVELOP when complete."
+        "message": "Execute the refine-feature procedure. Read the full feature folder plus any linked epic/dependency context, then create a phased implementation plan with tasks, unit tests, and quality checkpoints. The feature will be moved to 02_READY_TO_DEVELOP when complete."
     }
 
-async def run_start_feature(feature_id: str, feature_path: Optional[str] = None) -> dict:
+async def run_start_feature(feature_id: str, feature_path: Optional[str] = None, workflow_mode: Optional[str] = None) -> dict:
     """
     The Recipe for starting a feature (moving to IN_PROGRESS).
     Validates the feature and transitions from 02_READY_TO_DEVELOP to 03_IN_PROGRESS:
@@ -318,6 +321,7 @@ async def run_start_feature(feature_id: str, feature_path: Optional[str] = None)
     3. Git branch creation (if connected)
     4. Move to 03_IN_PROGRESS
     5. Git commit and push (if connected)
+    6. Optionally hand off to autonomous end-to-end implementation workflow
     """
     # Load the procedure template
     try:
@@ -332,6 +336,7 @@ async def run_start_feature(feature_id: str, feature_path: Optional[str] = None)
     # Replace placeholders with actual values
     procedure = procedure_template.replace("{{feature_id}}", feature_id or "")
     procedure = procedure.replace("{{feature_path}}", feature_path or "[Not provided - search in {MEMORY_BANK_PATH}/Features/ as defined in CLAUDE.md]")
+    procedure = procedure.replace("{{workflow_mode}}", workflow_mode or "[Not provided - interactive default]")
 
     return {
         "status": "pending_execution",
@@ -342,6 +347,7 @@ async def run_start_feature(feature_id: str, feature_path: Optional[str] = None)
             "{memory_bank}/Overview/",
             "{memory_bank}/Architecture/",
             "{memory_bank}/CodeGuidelines/",
+            "{memory_bank}/Features/00_EPICS/",
             "{memory_bank}/Features/02_READY_TO_DEVELOP/"
         ],
         "context_files": [
@@ -351,19 +357,19 @@ async def run_start_feature(feature_id: str, feature_path: Optional[str] = None)
             "pre-validation-report-[STATUS]-[timestamp].md",
             "start-feature-report-[timestamp].md"
         ],
-        "message": "Execute the start-feature procedure. This validates the feature (pre-validation + post-validation), creates a git branch, and moves the feature to 03_IN_PROGRESS. If pre-validation fails, the process STOPS with a rejection report."
+        "message": "Execute the start-feature procedure. This validates the feature (pre-validation + post-validation), creates a git branch, and moves the feature to 03_IN_PROGRESS. If `workflow_mode=autonomous`, immediately hand off into end-to-end implementation using the same workflow mode. If pre-validation fails, the process STOPS with a rejection report."
     }
 
-async def run_continue_implementation(feature_id: str, feature_path: Optional[str] = None, mode: Optional[str] = None) -> dict:
+async def run_continue_implementation(feature_id: str, feature_path: Optional[str] = None, mode: Optional[str] = None, workflow_mode: Optional[str] = None) -> dict:
     """
     The Recipe for continuing feature implementation.
     Orchestrates the systematic implementation of an IN_PROGRESS feature:
     1. Discovers current state (feature, phase, task)
-    2. Creates/refines the canonical Phase 1 planning document
+    2. Creates/refines the canonical Phase 1 planning document using feature, epic, and dependency context
     3. Executes tasks following specifications
     4. Manages quality (build, tests, code-review)
     5. Tracks progress (update phase files, FeatureTasks.md)
-    6. Requests user acceptance for phase completion
+    6. Hands off phase acceptance (interactive or autonomous workflow)
     7. Creates LessonsLearned documents per phase
     """
     # Load the procedure template
@@ -380,6 +386,7 @@ async def run_continue_implementation(feature_id: str, feature_path: Optional[st
     procedure = procedure_template.replace("{{feature_id}}", feature_id or "")
     procedure = procedure.replace("{{feature_path}}", feature_path or "[Not provided - search in {MEMORY_BANK_PATH}/Features/ as defined in CLAUDE.md]")
     procedure = procedure.replace("{{mode}}", mode or "[Not provided - default auto-detect]")
+    procedure = procedure.replace("{{workflow_mode}}", workflow_mode or "[Not provided - interactive default]")
 
     return {
         "status": "pending_execution",
@@ -390,7 +397,11 @@ async def run_continue_implementation(feature_id: str, feature_path: Optional[st
             "{memory_bank}/Overview/",
             "{memory_bank}/Architecture/",
             "{memory_bank}/CodeGuidelines/",
+            "{memory_bank}/Features/00_EPICS/",
+            "{memory_bank}/Features/01_SUBMITTED/",
+            "{memory_bank}/Features/02_READY_TO_DEVELOP/",
             "{memory_bank}/Features/03_IN_PROGRESS/",
+            "{memory_bank}/Features/04_COMPLETED/",
             "{memory_bank}/LessonsLearned/"
         ],
         "context_files": [
@@ -404,13 +415,13 @@ async def run_continue_implementation(feature_id: str, feature_path: Optional[st
             "LessonsLearned/{feature_id}/Phase-{N}-{name}.md",
             "feature-completion-report.md (when all phases complete)"
         ],
-        "message": "Execute the continue-implementation procedure locally. FIRST write operation when entering a PENDING phase: set phase status IN_PROGRESS in BOTH phase file and FeatureTasks.md before any task work. During Phase 1, create or refresh the canonical feature-root planning document `planning-analysis-report.md`; later phases must read and reuse it instead of re-planning. Keep all statuses synchronized (task: PENDING->IN_PROGRESS->COMPLETED/SKIPPED, checkpoint: NOT STARTED->IN_PROGRESS->COMPLETE). Optional mode: finalize_current_phase."
+        "message": "Execute the continue-implementation procedure locally. FIRST write operation when entering a PENDING phase: set phase status IN_PROGRESS in BOTH phase file and FeatureTasks.md before any task work. During Phase 1, create or refresh the canonical feature-root planning document `planning-analysis-report.md` using the full feature history plus any linked epic/dependency context; later phases must read and reuse it instead of re-planning. Understand what is already done, what remains, and what downstream phases/features depend on before writing code or tests. Keep all statuses synchronized (task: PENDING->IN_PROGRESS->COMPLETED/SKIPPED, checkpoint: NOT STARTED->IN_PROGRESS->COMPLETE). Optional `mode`: finalize_current_phase. Optional `workflow_mode`: autonomous for end-to-end no-prompt progression."
     }
 
-async def run_accept_phase(feature_id: str, phase_number: int, feature_path: Optional[str] = None) -> dict:
+async def run_accept_phase(feature_id: str, phase_number: int, feature_path: Optional[str] = None, workflow_mode: Optional[str] = None) -> dict:
     """
     The Recipe for accepting a completed phase.
-    Formalizes user acceptance of a phase that has passed all quality gates:
+    Formalizes phase acceptance after all quality gates pass:
     1. Validates checkpoint was filled
     2. Validates phase is awaiting acceptance
     3. Validates technical requirements (build, tests, code review)
@@ -418,7 +429,7 @@ async def run_accept_phase(feature_id: str, phase_number: int, feature_path: Opt
     5. Marks phase as COMPLETED in all files
     6. Updates time tracking with actual vs estimated
     7. Creates git commit with achievements
-    8. Previews next phase (without starting it)
+    8. Previews next phase (and optionally auto-continues in autonomous workflow mode)
     """
     # Load the procedure template
     try:
@@ -434,6 +445,7 @@ async def run_accept_phase(feature_id: str, phase_number: int, feature_path: Opt
     procedure = procedure_template.replace("{{feature_id}}", feature_id or "")
     procedure = procedure.replace("{{phase_number}}", str(phase_number) if phase_number is not None else "")
     procedure = procedure.replace("{{feature_path}}", feature_path or "[Not provided - search in {MEMORY_BANK_PATH}/Features/ as defined in CLAUDE.md]")
+    procedure = procedure.replace("{{workflow_mode}}", workflow_mode or "[Not provided - interactive default]")
 
     return {
         "status": "pending_execution",
@@ -441,6 +453,7 @@ async def run_accept_phase(feature_id: str, phase_number: int, feature_path: Opt
         "procedure_name": "accept-phase",
         "instructions": procedure,
         "context_folders": [
+            "{memory_bank}/Features/00_EPICS/",
             "{memory_bank}/Features/03_IN_PROGRESS/",
             "{memory_bank}/LessonsLearned/"
         ],
@@ -456,7 +469,7 @@ async def run_accept_phase(feature_id: str, phase_number: int, feature_path: Opt
             "Next phase preview (if not final phase)",
             "feature-completion-report.md (if final phase)"
         ],
-        "message": "Execute the accept-phase procedure. This formalizes user acceptance, updates all documentation with COMPLETED status and time metrics, creates git commit, and previews next phase. Does NOT auto-start next phase - user must run continue-implementation."
+        "message": "Execute the accept-phase procedure. This formalizes phase acceptance, updates all documentation with COMPLETED status and time metrics, creates git commit, and previews the next step. In `workflow_mode=autonomous`, continue automatically to the next phase or feature completion unless a blocking condition requires manual intervention."
     }
 
 async def run_code_review(feature_id: str, phase_number: int, feature_path: Optional[str] = None) -> dict:
@@ -506,7 +519,7 @@ async def run_code_review(feature_id: str, phase_number: int, feature_path: Opti
         "message": "Execute the code-review procedure locally. `pending_execution` is expected and means the MCP call succeeded with a recipe to run. Do not retry the same code-review MCP call unless a procedure step explicitly requires it."
     }
 
-async def run_complete_feature(feature_id: str, feature_path: Optional[str] = None) -> dict:
+async def run_complete_feature(feature_id: str, feature_path: Optional[str] = None, workflow_mode: Optional[str] = None) -> dict:
     """
     The Recipe for completing a feature.
     Validates all requirements and moves feature to COMPLETED state:
@@ -514,7 +527,7 @@ async def run_complete_feature(feature_id: str, feature_path: Optional[str] = No
     2. Verifies git repository is clean (no uncommitted/unpushed changes)
     3. Verifies build and tests pass (0 errors, 0 warnings, 100% tests)
     4. Compiles Lessons Learned from all phases into feature-level document
-    5. Asks user for additional lessons they want to highlight
+    5. Asks user for additional lessons they want to highlight (or skips the prompt in autonomous workflow mode)
     6. Updates all documentation with completion status
     7. Creates completion reports (validation, metrics, lessons learned)
     8. Moves feature to 04_COMPLETED folder
@@ -533,6 +546,7 @@ async def run_complete_feature(feature_id: str, feature_path: Optional[str] = No
     # Replace placeholders with actual values
     procedure = procedure_template.replace("{{feature_id}}", feature_id or "")
     procedure = procedure.replace("{{feature_path}}", feature_path or "[Not provided - search in {MEMORY_BANK_PATH}/Features/ as defined in CLAUDE.md]")
+    procedure = procedure.replace("{{workflow_mode}}", workflow_mode or "[Not provided - interactive default]")
 
     return {
         "status": "pending_execution",
@@ -553,7 +567,7 @@ async def run_complete_feature(feature_id: str, feature_path: Optional[str] = No
             "Feature folder moved to 04_COMPLETED/",
             "Git commit with completion details"
         ],
-        "message": "Execute the complete-feature procedure. This validates all phases are complete, compiles Lessons Learned (asks user for additional input), creates completion reports, and moves the feature to 04_COMPLETED. Running this command is confirmation to proceed (no extra yes/no gate)."
+        "message": "Execute the complete-feature procedure. This validates all phases are complete, compiles Lessons Learned, creates completion reports, and moves the feature to 04_COMPLETED. In `workflow_mode=autonomous`, use auto-detected lessons only instead of pausing for extra user input. Running this command is confirmation to proceed (no extra yes/no gate)."
     }
 
 async def run_deep_dive(file_path: str) -> dict:
@@ -741,7 +755,7 @@ async def json_rpc_handler(request: JsonRpcRequest):
                 },
                 {
                     "name": "refine-feature",
-                    "description": "Refine a feature into implementable tasks. Creates phased implementation plan with tasks, unit tests, and quality checkpoints. Moves feature from 01_SUBMITTED to 02_READY_TO_DEVELOP.",
+                    "description": "Refine a feature into implementable tasks using the full feature folder plus linked epic/dependency context. Creates a phased implementation plan with tasks, unit tests, and quality checkpoints, then moves the feature from 01_SUBMITTED to 02_READY_TO_DEVELOP.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
@@ -753,38 +767,41 @@ async def json_rpc_handler(request: JsonRpcRequest):
                 },
                 {
                     "name": "start-feature",
-                    "description": "Start implementing a feature. Validates (pre + post), creates git branch, and moves from 02_READY_TO_DEVELOP to 03_IN_PROGRESS. Rejects if documentation is incomplete or ambiguous.",
+                    "description": "Start implementing a feature. Validates (pre + post), creates git branch, and moves from 02_READY_TO_DEVELOP to 03_IN_PROGRESS. Optionally launches autonomous end-to-end workflow when `workflow_mode` is set. Rejects if documentation is incomplete or ambiguous.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
                             "feature_id": {"type": "string", "description": "The feature ID (e.g., FEAT-001) to start"},
-                            "feature_path": {"type": "string", "description": "Optional: Direct path to the feature folder if known"}
+                            "feature_path": {"type": "string", "description": "Optional: Direct path to the feature folder if known"},
+                            "workflow_mode": {"type": "string", "description": "Optional: set to 'autonomous' to continue from start-feature through all phases to completion without routine user interaction"}
                         },
                         "required": ["feature_id"]
                     }
                 },
                 {
                     "name": "continue-implementation",
-                    "description": "Continue implementing an IN_PROGRESS feature. Phase 1 creates or refreshes the canonical `planning-analysis-report.md`; later phases must read and reuse it instead of re-planning. Also orchestrates task execution, quality gates (build/test/review), phase completion with user acceptance, and LessonsLearned documents. Automatically resumes from current state.",
+                    "description": "Continue implementing an IN_PROGRESS feature. Phase 1 creates or refreshes the canonical `planning-analysis-report.md` using feature, epic, and dependency context; later phases must read and reuse it instead of re-planning. Also orchestrates task execution, quality gates (build/test/review), downstream-aware test coverage, phase completion, and LessonsLearned documents. With `workflow_mode=autonomous`, it continues through code review, phase acceptance, next phases, and final completion without routine user interaction.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
                             "feature_id": {"type": "string", "description": "The feature ID (e.g., FEAT-001) to continue implementing"},
                             "feature_path": {"type": "string", "description": "Optional: Direct path to the feature folder if known"},
-                            "mode": {"type": "string", "description": "Optional: set to 'finalize_current_phase' to force validation + phase-finalization reconciliation when tasks are done but statuses are not synchronized"}
+                            "mode": {"type": "string", "description": "Optional: set to 'finalize_current_phase' to force validation + phase-finalization reconciliation when tasks are done but statuses are not synchronized"},
+                            "workflow_mode": {"type": "string", "description": "Optional: set to 'autonomous' to continue through review, acceptance, next phases, and feature completion without routine user prompts"}
                         },
                         "required": ["feature_id"]
                     }
                 },
                 {
                     "name": "accept-phase",
-                    "description": "Accept a completed phase. Validates requirements, marks phase as COMPLETED in all files (phase file, FeatureTasks.md, start-feature-report), updates time tracking, creates git commit, and previews next phase. Does NOT auto-start next phase.",
+                    "description": "Accept a completed phase. Validates requirements, marks phase as COMPLETED in all files (phase file, FeatureTasks.md, start-feature-report), updates time tracking, creates git commit, and previews next phase. With `workflow_mode=autonomous`, it continues automatically to the next phase or feature completion when safe.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
                             "feature_id": {"type": "string", "description": "The feature ID (e.g., FEAT-001)"},
                             "phase_number": {"type": "integer", "description": "The phase number to accept (e.g., 1, 2, 3)"},
-                            "feature_path": {"type": "string", "description": "Optional: Direct path to the feature folder if known"}
+                            "feature_path": {"type": "string", "description": "Optional: Direct path to the feature folder if known"},
+                            "workflow_mode": {"type": "string", "description": "Optional: set to 'autonomous' to continue the end-to-end workflow after acceptance without routine user prompts"}
                         },
                         "required": ["feature_id", "phase_number"]
                     }
@@ -804,12 +821,13 @@ async def json_rpc_handler(request: JsonRpcRequest):
                 },
                 {
                     "name": "complete-feature",
-                    "description": "Complete a feature and move to COMPLETED state. Validates all phases done, compiles Lessons Learned (asks user for input), creates completion reports, and moves feature to 04_COMPLETED. Invocation is treated as confirmation to proceed.",
+                    "description": "Complete a feature and move to COMPLETED state. Validates all phases done, compiles Lessons Learned, creates completion reports, and moves feature to 04_COMPLETED. With `workflow_mode=autonomous`, it skips the extra lessons prompt and uses auto-detected lessons only. Invocation is treated as confirmation to proceed.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
                             "feature_id": {"type": "string", "description": "The feature ID (e.g., FEAT-001) to complete"},
-                            "feature_path": {"type": "string", "description": "Optional: Direct path to the feature folder if known"}
+                            "feature_path": {"type": "string", "description": "Optional: Direct path to the feature folder if known"},
+                            "workflow_mode": {"type": "string", "description": "Optional: set to 'autonomous' to finalize without pausing for extra lessons-learned input"}
                         },
                         "required": ["feature_id"]
                     }
@@ -873,19 +891,22 @@ async def json_rpc_handler(request: JsonRpcRequest):
             elif tool_name == "start-feature":
                 result = await run_start_feature(
                     feature_id=tool_args.get("feature_id"),
-                    feature_path=tool_args.get("feature_path")
+                    feature_path=tool_args.get("feature_path"),
+                    workflow_mode=tool_args.get("workflow_mode")
                 )
             elif tool_name == "continue-implementation":
                 result = await run_continue_implementation(
                     feature_id=tool_args.get("feature_id"),
                     feature_path=tool_args.get("feature_path"),
-                    mode=tool_args.get("mode")
+                    mode=tool_args.get("mode"),
+                    workflow_mode=tool_args.get("workflow_mode")
                 )
             elif tool_name == "accept-phase":
                 result = await run_accept_phase(
                     feature_id=tool_args.get("feature_id"),
                     phase_number=tool_args.get("phase_number"),
-                    feature_path=tool_args.get("feature_path")
+                    feature_path=tool_args.get("feature_path"),
+                    workflow_mode=tool_args.get("workflow_mode")
                 )
             elif tool_name == "code-review":
                 result = await run_code_review(
@@ -896,7 +917,8 @@ async def json_rpc_handler(request: JsonRpcRequest):
             elif tool_name == "complete-feature":
                 result = await run_complete_feature(
                     feature_id=tool_args.get("feature_id"),
-                    feature_path=tool_args.get("feature_path")
+                    feature_path=tool_args.get("feature_path"),
+                    workflow_mode=tool_args.get("workflow_mode")
                 )
             elif tool_name == "deep-dive":
                 result = await run_deep_dive(

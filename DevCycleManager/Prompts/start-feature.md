@@ -5,7 +5,7 @@ name: start-feature
 purpose: Quality gate before implementation — validate, create git branch, move feature to 03_IN_PROGRESS
 tools: Read, Write, Edit, Glob, Bash (git branch/add/commit/push)
 triggers: Feature is refined and in 02_READY_TO_DEVELOP, user wants to begin implementation
-inputs: feature_id, feature_path (optional)
+inputs: feature_id, feature_path (optional), workflow_mode (optional)
 outputs: Feature moved to 03_IN_PROGRESS, git branch created, validation reports
 related: refine-feature, continue-implementation, accept-phase
 -->
@@ -14,6 +14,7 @@ related: refine-feature, continue-implementation, accept-phase
 
 - **Feature ID**: {{feature_id}}
 - **Feature Path** (optional): {{feature_path}}
+- **Workflow Mode** (optional): {{workflow_mode}}
 
 ---
 
@@ -41,6 +42,7 @@ This procedure is DONE when:
 - [ ] Parent epic updated (if linked)
 - [ ] Git commit created with validation summary
 - [ ] Success report saved as `start-feature-report-{timestamp}.md`
+- [ ] If `Workflow Mode = autonomous`, handoff to `continue-implementation` initiated with the same workflow mode
 
 ---
 
@@ -279,6 +281,18 @@ Save to `03_IN_PROGRESS/{folder}/start-feature-report-{timestamp}.md` containing
 - Epic status (if linked)
 - Next steps: start with Phase 0 Health Check, work phases sequentially, track time, commit after each task
 
+### 8.1 Autonomous Handoff
+
+If `Workflow Mode` is `autonomous`:
+
+1. Do not stop after the success report.
+2. Immediately invoke `continue-implementation` with:
+   - `feature_id={{feature_id}}`
+   - `feature_path=[resolved path if known]`
+   - `workflow_mode=autonomous`
+3. Treat this as the official no-routine-prompt workflow from feature start through feature completion.
+4. Only stop if a blocking error, failed quality gate, or manual decision is required.
+
 ---
 
 ## Rules
@@ -291,6 +305,7 @@ Save to `03_IN_PROGRESS/{folder}/start-feature-report-{timestamp}.md` containing
 - Branch naming: `feat/{FEAT-XXX}-{slug}`
 - Update parent epic only if linked (not "N/A")
 - All auto-fixes must be documented in the post-validation summary
+- `Workflow Mode = autonomous` changes pacing, not quality: all validation, review, acceptance, and completion gates still apply
 
 ## Error Recovery
 

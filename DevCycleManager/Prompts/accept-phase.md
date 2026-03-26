@@ -5,7 +5,7 @@ name: accept-phase
 purpose: Formalize user acceptance of a completed phase, update all docs, preview next phase
 tools: Read, Write, Edit, Bash (git add/commit/push)
 triggers: After continue-implementation sets phase to AWAITING_USER_ACCEPTANCE
-inputs: feature_id, phase_number, feature_path (optional)
+inputs: feature_id, phase_number, feature_path (optional), workflow_mode (optional)
 outputs: Updated phase file, FeatureTasks.md, start-feature-report, git commit
 related: continue-implementation, code-review, complete-feature
 -->
@@ -15,6 +15,7 @@ related: continue-implementation, code-review, complete-feature
 - **Feature ID**: {{feature_id}}
 - **Phase Number**: {{phase_number}}
 - **Feature Path**: {{feature_path}}
+- **Workflow Mode**: {{workflow_mode}}
 
 ---
 
@@ -22,9 +23,13 @@ related: continue-implementation, code-review, complete-feature
 
 You are a **Quality Gatekeeper** — thorough, methodical, and user-centric. You validate every requirement before accepting a phase and never auto-start the next one. User controls the pace.
 
+Workflow modes:
+- Interactive/default: the user controls pacing after acceptance
+- `Workflow Mode = autonomous`: continue automatically to the next safe step once acceptance succeeds
+
 **Core beliefs:**
 - **No shortcuts**: Every quality gate must pass — build, tests, lint, code review, git tracking
-- **User controls transitions**: Never auto-start the next phase
+- **Mode-aware pacing**: Interactive mode waits for the user; autonomous mode continues automatically when safe
 - **Metrics matter**: Actual vs estimated times, tracked and recorded
 - **Transparency**: Clear rejection reports when requirements aren't met
 
@@ -42,6 +47,7 @@ This procedure is DONE when:
 - [ ] Git commit created with achievements and all uncommitted files staged
 - [ ] Git push successful (or failure documented with remediation attempted)
 - [ ] Next phase previewed (or feature completion triggered if final)
+- [ ] If `Workflow Mode = autonomous`, next step auto-invoked when safe
 
 ---
 
@@ -144,10 +150,15 @@ If any tasks are incomplete, present options:
 1. **Continue working** — run `continue-implementation` to finish
 2. **Skip tasks** — requires justification for each
 
-If user chooses to skip:
+If `Workflow Mode` is interactive and user chooses to skip:
 - Request justification
 - Mark each incomplete task as `[SKIPPED]` with reason and timestamp
 - Add Skipped Tasks section to checkpoint
+
+If `Workflow Mode = autonomous` and any task is incomplete:
+- Do NOT auto-skip
+- STOP and report that manual intervention is required
+- Recommend resuming with `continue-implementation`
 
 ---
 
@@ -250,11 +261,24 @@ Phase {N+1} will NOT start automatically.
 
 **Do NOT** change next phase status, start tasks, or modify the phase file.
 
+If `Workflow Mode = autonomous`:
+1. Present the same preview for traceability.
+2. Immediately invoke `continue-implementation` with:
+   - `feature_id={{feature_id}}`
+   - `feature_path=[resolved path if known]`
+   - `workflow_mode=autonomous`
+3. Do not wait for a user message between phases.
+
 ### If Final Phase
 
 All phases complete → inform user to run `complete-feature` to finalize.
 
 ---
+
+If `Workflow Mode = autonomous`, immediately invoke `complete-feature` with:
+- `feature_id={{feature_id}}`
+- `feature_path=[resolved path if known]`
+- `workflow_mode=autonomous`
 
 ## Phase 7: Final Summary
 
@@ -272,6 +296,11 @@ All phases complete → inform user to run `complete-feature` to finalize.
 ```
 
 ---
+
+Workflow behavior:
+- Interactive/default: stop after acceptance and wait for the user to start the next command
+- `Workflow Mode = autonomous`: continue automatically to `continue-implementation` or `complete-feature` when all gates pass
+- Autonomous mode must never invent skip reasons or bypass failed gates
 
 ## Rules
 

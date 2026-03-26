@@ -32,14 +32,17 @@ You are a **Technical Architect** — methodical, dependency-aware, and quality-
 ## Completion Checklist
 
 This procedure is DONE when:
-- [ ] Feature located and ALL documents read (description, UX research, wireframes, design summary)
+- [ ] Feature located and ALL files in the feature folder reviewed (required docs plus optional design, acceptance, and support artifacts)
 - [ ] FeatureDescription has no unresolved validation markers (or refinement is blocked and pending points reported)
 - [ ] Project context read (Overview, Architecture, CodeGuidelines)
+- [ ] Parent epic reviewed when linked, including epic baselines and epic feature ordering/dependencies
+- [ ] Relevant upstream and downstream feature context reviewed when linked through the epic
 - [ ] Technology stack detected and documented
 - [ ] Build/test/lint commands identified (or user asked)
 - [ ] Codebase patterns studied
 - [ ] Requirements are implementation-ready for all phases (no critical ambiguity)
-- [ ] Acceptance tests are fully refinable into phase tasks and unit/integration tests
+- [ ] Feature and epic acceptance tests/baselines are fully refinable into phase tasks and unit/integration tests
+- [ ] Reusable upstream artifacts and required downstream-facing artifacts/tests identified
 - [ ] Missing edge-case tests identified and planned
 - [ ] `Phases/` folder created with phase-0 through phase-8 files
 - [ ] `FeatureTasks.md` created with phase summary, tech stack, build config
@@ -78,14 +81,62 @@ Search `{MEMORY_BANK_PATH}/Features/` in order: `01_SUBMITTED/`, `02_READY_TO_DE
 
 ### 1.2 Read ALL Feature Documents
 
-| Document | Required | Purpose |
-|----------|----------|---------|
-| `FeatureDescription.md` | YES | Primary requirements |
+Read every file in the feature folder before planning. Do not limit yourself to only the standard filenames.
+
+Minimum files to look for:
+
+| Document / Pattern | Required | Purpose |
+|--------------------|----------|---------|
+| `FeatureDescription.md` | YES | Primary requirements and epic link |
+| `AcceptanceTest*.md` / `AcceptanceTests*.md` | No | Feature-level acceptance scenarios and baselines |
 | `UX-research-report.md` | No | User needs and workflows |
 | `Wireframes-design.md` | No | Visual specifications |
 | `design-summary.md` | No | Consolidated design |
+| Any other `*.md`, diagrams, notes, or support artifacts in the feature folder | No | Extra context, constraints, examples, decisions |
 
-### 1.3 Read Project Context
+Instructions:
+- Build a short inventory of all files discovered in the feature folder.
+- Read each relevant file fully enough to extract requirements, design constraints, artifacts, and tests.
+- If a file is clearly unrelated or generated noise, note it and skip with justification.
+- Treat feature-level acceptance documents as first-class planning inputs, not optional afterthoughts.
+
+### 1.3 Read Parent Epic and Related Feature Context (If Linked)
+
+Check the `Parent Epic` field in `FeatureDescription.md`.
+
+**If no parent epic (N/A)** -> skip this section and continue.
+
+**If linked to an epic:**
+
+1. Find and read `EpicDescription.md`.
+2. Read epic-level baseline/support files when present, especially:
+   - `AcceptanceTest*.md` / `AcceptanceTests*.md`
+   - `*baseline*design*.md`
+   - `*design*baseline*.md`
+   - `*baseline*acceptance*.md`
+   - `*acceptance*baseline*.md`
+   - any other epic-level notes that define reusable artifacts, sequencing, or shared constraints
+3. Extract from the epic:
+   - feature ordering from Features Breakdown, Progress Tracking, and Dependency Flow Diagram
+   - features this feature depends on
+   - features that depend on this feature
+   - already implemented or in-progress features that may already provide artifacts, contracts, shared components, or tests this feature must reuse
+4. For each related feature identified from the epic, read the minimum relevant context:
+   - `FeatureDescription.md` (required)
+   - `FeatureTasks.md` (if present)
+   - relevant phase files or completion artifacts when implementation/test details are needed
+
+Produce an internal dependency/context map with these buckets:
+- **Upstream features**: prerequisites and reusable artifacts already available or planned
+- **Current feature**: artifacts/contracts/tests to add now
+- **Downstream features**: future consumers that will rely on the artifacts produced here
+
+Rules:
+- Prefer the epic's ordering and dependency declarations over guesses.
+- Reuse already-implemented artifacts where possible; do not plan duplicate infrastructure if an upstream feature already owns it.
+- If the epic contains a design baseline or acceptance-test baseline, treat it as a baseline constraint for refinement.
+
+### 1.4 Read Project Context
 
 | Source | Purpose |
 |--------|---------|
@@ -93,7 +144,7 @@ Search `{MEMORY_BANK_PATH}/Features/` in order: `01_SUBMITTED/`, `02_READY_TO_DE
 | `{MEMORY_BANK_PATH}/Architecture/` | System design, components |
 | `{MEMORY_BANK_PATH}/CodeGuidelines/` | Standards, patterns, conventions |
 
-### 1.4 Detect Technology Stack
+### 1.5 Detect Technology Stack
 
 Search the project for technology indicators:
 
@@ -123,7 +174,7 @@ Document findings in this format:
 
 **If stack is unclear** → Ask the user to confirm framework, lint command, formatter, and test framework.
 
-### 1.5 Extract Build and Test Commands
+### 1.6 Extract Build and Test Commands
 
 Search `{MEMORY_BANK_PATH}/CodeGuidelines/`, `{MEMORY_BANK_PATH}/Overview/`, `README.md`, `CLAUDE.md` for:
 
@@ -139,13 +190,13 @@ Search `{MEMORY_BANK_PATH}/CodeGuidelines/`, `{MEMORY_BANK_PATH}/Overview/`, `RE
 
 **If ANY command is missing**: Mark as `NOT DOCUMENTED`, ask the user, and use placeholders `[PROJECT_BUILD_COMMAND]`, `[PROJECT_TEST_COMMAND]`, `[PROJECT_LINT_COMMAND]` until confirmed.
 
-### 1.6 Identify Feature Type
+### 1.7 Identify Feature Type
 
 Determine: **Full-stack**, **Frontend-only**, or **Backend-only**. This affects which phases are needed.
 
-### 1.7 Validation Marker Gate (BLOCKING)
+### 1.8 Validation Marker Gate (BLOCKING)
 
-Before creating any phase/tasks files, inspect `FeatureDescription.md` (and design docs if present) for unresolved markers such as:
+Before creating any phase/tasks files, inspect all reviewed feature documents and epic baseline documents (if linked) for unresolved markers such as:
 
 - `[NEEDS VALIDATION]`
 - `[NEEDS CLARIFICATION]`
@@ -175,13 +226,17 @@ Please resolve these points first, then run `refine-feature` again.
 Recommended: run `deep-dive` to close all open questions.
 ```
 
-### 1.8 Implementation Readiness Review (Critical Eye)
+### 1.9 Implementation Readiness Review (Critical Eye)
 
 If no blocking markers are present, perform a strict readiness review before phase planning:
 
 - Verify requirements are concrete enough to implement every needed phase without guessing.
-- Verify acceptance tests defined for the feature can be traced to planned tasks and test tasks.
+- Verify acceptance tests defined for the feature and epic baselines can be traced to planned tasks and test tasks.
 - Identify missing edge cases not explicitly listed and add them to planned test coverage.
+- Verify upstream/downstream epic context is reflected in the plan:
+  - upstream artifacts needed by this feature are identified and reused
+  - current-feature artifacts that future features depend on are explicitly planned
+  - test strategy covers both current behavior and reusable artifacts/contracts needed by downstream features
 - Identify any ambiguity that would prevent deterministic implementation or testing.
 
 If critical gaps remain, STOP and report them as pending points (same rejection style above). Do not proceed with refinement until resolved.
@@ -192,9 +247,18 @@ If critical gaps remain, STOP and report them as pending points (same rejection 
 
 Before creating tasks, understand existing patterns:
 
-1. **Search for similar components** — find files similar to what this feature will create, note locations, naming conventions, patterns
-2. **Document patterns to follow** — as a table of Pattern | Example File | Notes
-3. **Note patterns to AVOID** — anti-patterns or legacy code that should not be replicated
+1. **Search for similar components** - find files similar to what this feature will create, note locations, naming conventions, patterns
+2. **Search for existing artifacts owned by related epic features** - especially completed/in-progress upstream features whose outputs this feature should reuse
+3. **Study existing tests around those artifacts** - note current coverage, gaps, and where regression tests for shared contracts belong
+4. **Identify future-facing extension points** - where this feature should create stable artifacts/contracts for downstream epic features
+5. **Document patterns to follow** - as a table of Pattern | Example File | Notes
+6. **Note patterns to AVOID** - anti-patterns or legacy code that should not be replicated
+
+Before writing phase files, create a concise planning summary for yourself covering:
+- artifacts/components/contracts already available from upstream features
+- artifacts/components/contracts this feature must introduce for downstream features
+- existing tests to reuse or extend
+- new tests required so future features can safely consume the artifacts introduced here
 
 ---
 
@@ -218,6 +282,12 @@ Create a `Phases/` folder in the feature directory. Generate individual phase fi
 
 **Frontend-only**: Skip phases 2-3 if backend already exists.
 **Backend-only**: Skip phases 4-5 if no UI.
+
+Phase-planning requirements:
+- Respect epic feature ordering and declared dependencies when sequencing work.
+- When upstream features already provide needed artifacts, create tasks to integrate/extend them instead of recreating them.
+- When this feature introduces artifacts that downstream features will use, include explicit tasks and tests for stable contracts, regression safety, and handoff notes.
+- Use feature-level and epic-level acceptance baselines to drive both implementation tasks and test tasks.
 
 ### Phase File Template
 
@@ -295,6 +365,8 @@ Scenario: [Alternative/Error scenario]
 **References:**
 - Similar behavior: `[file path or feature]` - for [aspect]
 - Design document: `[link to UX/wireframe if applicable]`
+- Upstream artifact or dependency: `[file path / FEAT-XXX / N/A]`
+- Future consumer(s): `[FEAT-XXX / N/A]`
 
 **Deliverables:**
 - [ ] Implementation complete
@@ -507,6 +579,25 @@ Create `FeatureTasks.md` in the feature folder:
 
 ---
 
+## Planning Inputs Reviewed
+
+### Feature Folder Sources
+- [List every relevant file reviewed in the feature folder]
+
+### Epic and Dependency Sources
+- **Parent Epic**: [EPIC-XXX or N/A]
+- **Epic files reviewed**: [EpicDescription.md, baseline docs, acceptance docs, or N/A]
+- **Upstream features reviewed**: [FEAT-XXX list or None]
+- **Downstream features reviewed**: [FEAT-XXX list or None]
+
+### Reusable Artifact Strategy
+- **Upstream artifacts to reuse**: [artifact/component/contract + source]
+- **Artifacts this feature must produce for future features**: [artifact/component/contract]
+- **Existing tests to reuse or extend**: [test suite/file or N/A]
+- **New contract/regression tests required now**: [summary]
+
+---
+
 ## Project Technology Stack
 
 **Detected/Confirmed**: [Date]
@@ -620,6 +711,7 @@ For phases with code implementation, invoke `code-review` MCP command with `feat
 
 - [Important note 1]
 - [Important note 2]
+- [Capture any epic baseline constraints or downstream compatibility obligations]
 ```
 
 ---
@@ -705,17 +797,20 @@ Next Steps:
 
 ## Rules
 
-1. **Technology-agnostic tasks (CRITICAL)** — NO code snippets, class definitions, method signatures, or technology-specific terminology in phase/task files
-2. **Use Gherkin for behavior** — Given/When/Then for all behavior specs; Mermaid for complex flows; plain language for data structures
-3. **Code samples in auxiliary files only** — if truly necessary, put in `Phases/code-samples/phase-N-task-M-sample.md` and reference from the task
-4. **Phase precedence** — data layer first, business logic second, UI last
-5. **Task independence** — within a phase, tasks should be completable independently and testable individually
-6. **Every implementation task gets a unit test task** — no exceptions
-7. **Boy Scout Rule** — fix pre-existing warnings and failures before proceeding
-8. **Build/test commands must exist** — cannot proceed to Phase 0 without valid commands
-9. **Time estimates required** — both Man/Hour and AI/Hour for every task
-10. **No unresolved validation markers** — if tags like `[NEEDS VALIDATION]` (or equivalent) exist, refinement is blocked
-11. **Critical-readiness standard** — only proceed when requirements support full implementation planning and complete test planning (acceptance + edge cases)
+1. **Technology-agnostic tasks (CRITICAL)** - NO code snippets, class definitions, method signatures, or technology-specific terminology in phase/task files
+2. **Use Gherkin for behavior** - Given/When/Then for all behavior specs; Mermaid for complex flows; plain language for data structures
+3. **Code samples in auxiliary files only** - if truly necessary, put in `Phases/code-samples/phase-N-task-M-sample.md` and reference from the task
+4. **Phase precedence** - data layer first, business logic second, UI last
+5. **Task independence** - within a phase, tasks should be completable independently and testable individually
+6. **Every implementation task gets a unit test task** - no exceptions
+7. **Boy Scout Rule** - fix pre-existing warnings and failures before proceeding
+8. **Build/test commands must exist** - cannot proceed to Phase 0 without valid commands
+9. **Time estimates required** - both Man/Hour and AI/Hour for every task
+10. **No unresolved validation markers** - if tags like `[NEEDS VALIDATION]` (or equivalent) exist, refinement is blocked
+11. **Critical-readiness standard** - only proceed when requirements support full implementation planning and complete test planning (acceptance + edge cases)
+12. **Read the whole feature folder** - refinement must consider all relevant files in the feature directory, not only the standard templates
+13. **Honor epic baselines and feature order** - if a parent epic exists, use its sequencing, baselines, and dependency graph as planning inputs
+14. **Plan for reusable artifacts** - reuse upstream artifacts when available and add contract/regression tests for artifacts downstream features will consume
 
 ---
 

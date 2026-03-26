@@ -136,17 +136,17 @@ Features flow through state folders in `MemoryBank/Features/`:
 
 | Command | Purpose |
 |---------|---------|
-| `refine-feature` | Transform a feature into a phased implementation plan (9 phases, tasks with Gherkin specs). Moves to `02_READY_TO_DEVELOP/` |
-| `start-feature` | Validate documentation, create git branch, move to `03_IN_PROGRESS/`. Rejects if docs are incomplete or ambiguous |
-| `continue-implementation` | Orchestrate task-by-task implementation; Phase 1 creates canonical `planning-analysis-report.md`, later phases reuse it; build, test, commit tracking, code review, lessons learned |
+| `refine-feature` | Transform a feature into a phased implementation plan using the full feature folder plus linked epic/dependency context (9 phases, tasks with Gherkin specs). Moves to `02_READY_TO_DEVELOP/` |
+| `start-feature` | Validate documentation, create git branch, move to `03_IN_PROGRESS/`. Rejects if docs are incomplete or ambiguous. Supports `workflow_mode=autonomous` for official no-routine-prompt execution |
+| `continue-implementation` | Orchestrate task-by-task implementation using feature history plus linked epic/dependency context; Phase 1 creates canonical `planning-analysis-report.md`, later phases reuse it; build, downstream-aware tests, commit tracking, code review, lessons learned. Supports `workflow_mode=autonomous` to continue through acceptance and completion |
 
 ### Quality and Completion
 
 | Command | Purpose |
 |---------|---------|
 | `code-review` | Review all phase changes against CodeGuidelines. Returns APPROVED, APPROVED_WITH_NOTES, or NEEDS_CHANGES |
-| `accept-phase` | Validate all quality gates (build, tests, lint, code review, git commits) and mark a phase COMPLETED |
-| `complete-feature` | Validate all phases done, compile lessons learned, move feature to `04_COMPLETED/` |
+| `accept-phase` | Validate all quality gates (build, tests, lint, code review, git commits) and mark a phase COMPLETED. Supports `workflow_mode=autonomous` to continue automatically |
+| `complete-feature` | Validate all phases done, compile lessons learned, move feature to `04_COMPLETED/`. Supports `workflow_mode=autonomous` to skip the extra lessons prompt |
 
 ## Typical Workflow
 
@@ -165,6 +165,10 @@ Features flow through state folders in `MemoryBank/Features/`:
       └─ accept-phase              # User accepts phase
    e. complete-feature             # Finalize & move to COMPLETED
 ```
+
+Official autonomous workflow:
+`start-feature(feature_id="FEAT-XXX", workflow_mode="autonomous")`
+This hands off to `continue-implementation`, `accept-phase`, and `complete-feature` automatically unless a true blocker requires manual intervention.
 
 ## Quality Gates
 

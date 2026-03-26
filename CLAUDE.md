@@ -331,12 +331,13 @@ LLM: Invokes design-feature with feature_id="FEAT-001"
 | `feature_path` | No | Direct path to feature folder if known |
 
 **What It Does**:
-- Analyzes all feature documents
+- Analyzes the full feature folder plus linked epic/dependency context when present
 - Detects project technology stack (framework, lint, tests)
 - Creates phased implementation plan (Phases 0-8)
 - Breaks down each phase into independent, testable tasks
 - Creates `FeatureTasks.md` summary
 - Creates individual phase files in `Phases/` folder
+- Incorporates epic baselines, sibling feature order, reusable artifacts, and future-facing test obligations
 - Adds Git Commits tracking tables and Code Review History sections
 - Moves feature from `01_SUBMITTED` to `02_READY_TO_DEVELOP`
 
@@ -388,6 +389,7 @@ LLM: Invokes refine-feature with feature_id="FEAT-001"
 - Creates git branch: `feat/FEAT-XXX-feature-name`
 - Moves feature from `02_READY_TO_DEVELOP` to `03_IN_PROGRESS`
 - Creates `start-feature-report-*.md`
+- If `workflow_mode="autonomous"`, immediately hands off to the official end-to-end workflow
 
 **Example**:
 ```
@@ -414,15 +416,20 @@ LLM: Invokes start-feature with feature_id="FEAT-001"
 |-----------|----------|-------------|
 | `feature_id` | Yes | The feature ID (e.g., FEAT-001) |
 | `feature_path` | No | Direct path to feature folder if known |
+| `workflow_mode` | No | Set to `autonomous` to continue from start through implementation to completion without routine user prompts |
+| `mode` | No | Existing override such as `finalize_current_phase` |
+| `workflow_mode` | No | Set to `autonomous` to continue through review, acceptance, next phases, and feature completion without routine user prompts |
 
 **What It Does**:
 - Identifies current state (which phase, which task)
 - During Phase 1, creates or refreshes the canonical feature-level planning document: `planning-analysis-report.md`
+- Reads linked epic documents, baselines, related features, and completed feature history to understand dependencies and reuse
 - For each task:
   - Gathers task context and requirements
   - Reads `planning-analysis-report.md` in Phases 2-8 instead of re-doing phase planning
+  - Accounts for what is already done and what downstream phases/features will depend on
   - Guides implementation following Gherkin specs
-  - Runs build and tests
+  - Runs build and tests, including downstream-aware regression/contract coverage when needed
   - **Tracks git commits** in task and phase tables
   - Marks task as COMPLETED
 - At phase completion:
@@ -431,6 +438,7 @@ LLM: Invokes start-feature with feature_id="FEAT-001"
   - **Invokes `code-review` MCP command** (for code-relevant phases)
   - Creates LessonsLearned document
   - Sets phase to AWAITING_USER_ACCEPTANCE
+- In `workflow_mode="autonomous"`, auto-invokes `accept-phase` and continues until `complete-feature`
 
 **Git Commit Tracking** (CRITICAL):
 After every commit, the LLM must update:
@@ -505,6 +513,7 @@ LLM: Invokes code-review with feature_id="FEAT-001", phase_number=3
 | `feature_id` | Yes | The feature ID (e.g., FEAT-001) |
 | `phase_number` | Yes | The phase number to accept (e.g., 3) |
 | `feature_path` | No | Direct path to feature folder if known |
+| `workflow_mode` | No | Set to `autonomous` to continue automatically to the next phase or feature completion after acceptance |
 
 **What It Does**:
 - **Validates ALL requirements** (will reject if any fail):
@@ -520,6 +529,7 @@ LLM: Invokes code-review with feature_id="FEAT-001", phase_number=3
 - Updates FeatureTasks.md with actual times
 - Creates git commit with phase achievements
 - Previews next phase (does NOT auto-start)
+- In `workflow_mode="autonomous"`, continues automatically to `continue-implementation` or `complete-feature` when safe
 
 **Example**:
 ```
@@ -549,12 +559,13 @@ LLM: Invokes accept-phase with feature_id="FEAT-001", phase_number=3
 |-----------|----------|-------------|
 | `feature_id` | Yes | The feature ID (e.g., FEAT-001) |
 | `feature_path` | No | Direct path to feature folder if known |
+| `workflow_mode` | No | Set to `autonomous` to skip the extra lessons prompt and finalize non-interactively |
 
 **What It Does**:
 - Validates all phases are COMPLETED or SKIPPED (with justification)
 - Verifies git is clean, build and tests pass
 - Compiles Lessons Learned from all phases
-- **Asks user** for additional lessons to highlight
+- **Asks user** for additional lessons to highlight in interactive mode, or uses auto-detected lessons only in autonomous mode
 - Creates `feature-completion-report.md`
 - Moves feature folder from `03_IN_PROGRESS` to `04_COMPLETED`
 - Creates final git commit

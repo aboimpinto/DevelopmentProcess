@@ -5,7 +5,7 @@ name: complete-feature
 purpose: Validate all phases complete, compile lessons learned, move feature from 03_IN_PROGRESS to 04_COMPLETED
 tools: Read, Write, Edit, Glob, Bash (git status/log/mv/add/commit/push)
 triggers: All phases accepted, user wants to finalize the feature
-inputs: feature_id, feature_path (optional)
+inputs: feature_id, feature_path (optional), workflow_mode (optional)
 outputs: Feature moved to 04_COMPLETED, feature-completion-report.md, LessonsLearned compiled
 related: accept-phase, continue-implementation, code-review
 -->
@@ -14,6 +14,7 @@ related: accept-phase, continue-implementation, code-review
 
 - **Feature ID**: {{feature_id}}
 - **Feature Path** (optional): {{feature_path}}
+- **Workflow Mode** (optional): {{workflow_mode}}
 
 ---
 
@@ -38,7 +39,7 @@ This procedure is DONE when:
 - [ ] Build passes (0 errors, 0 warnings)
 - [ ] Tests pass (100%)
 - [ ] Lessons Learned compiled from all phases
-- [ ] User asked for additional lessons
+- [ ] Additional lessons handled according to workflow mode
 - [ ] `feature-completion-report.md` created
 - [ ] FeatureTasks.md updated with completion section
 - [ ] Feature folder moved to `04_COMPLETED/`
@@ -147,11 +148,18 @@ Calculate: total estimated vs actual time, phases with largest variance, most ch
 
 ### 5.3 Ask User for Additional Lessons
 
+If `Workflow Mode` is interactive or not provided:
+
 Present auto-detected lessons and time analysis to the user. Ask:
 
 > Would you like to add any additional lessons learned? (Decisions that worked well, things you would change, tools that helped, problems that took longer, recommendations for future features.) Reply "none" to proceed with auto-detected lessons only.
 
 **WAIT for user response.**
+
+If `Workflow Mode = autonomous`:
+- Do NOT ask the user for additional lessons.
+- Proceed using auto-detected lessons only.
+- Record in the lessons document that autonomous workflow mode skipped additional user-supplied lessons.
 
 ### 5.4 Create Feature-Level Lessons Learned
 
@@ -165,7 +173,7 @@ Save to `{MEMORY_BANK_PATH}/LessonsLearned/{{feature_id}}/Feature-Completion-Les
 | Challenges Encountered | Each with impact, resolution, prevention |
 | Technical Decisions | Decision, choice, rationale, outcome table |
 | Patterns Discovered | Reusable patterns and anti-patterns identified |
-| User-Highlighted Lessons | Lessons provided by user during this step |
+| User-Highlighted Lessons | Lessons provided by user during this step, if any |
 | Recommendations | Estimation, architecture, process, testing, documentation |
 | Files Changed | Summary counts + key files table |
 | Quality Metrics | Build, test, code review, final status |
@@ -281,7 +289,7 @@ Present to user:
 ## Rules
 
 - Never skip validation steps — all checks must pass before proceeding
-- Always compile Lessons Learned including user input
+- Always compile Lessons Learned; include user input in interactive mode and auto-detected lessons only in autonomous mode
 - Never ask a second final-confirmation question after `complete-feature` is invoked
 - Never proceed if any validation fails — report and stop
 - Update all documentation (FeatureTasks.md, FeatureDescription.md) before the move

@@ -1,0 +1,5 @@
+.git
+MemoryBank
+MemoryBank;C
+**/__pycache__/
+**/*.pyc

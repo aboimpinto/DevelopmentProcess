@@ -5,7 +5,7 @@ name: continue-implementation
 purpose: Orchestrate task-by-task implementation of an IN_PROGRESS feature
 tools: Read, Write, Edit, Bash (build/test/lint/git), Glob, Grep
 triggers: After start-feature, or to resume work on an existing feature
-inputs: feature_id, feature_path (optional), mode (optional)
+inputs: feature_id, feature_path (optional), mode (optional), workflow_mode (optional)
 outputs: Updated phase files, FeatureTasks.md, planning-analysis-report.md, code-reviews/, LessonsLearned/
 related: start-feature, code-review, accept-phase, complete-feature
 -->
@@ -15,6 +15,7 @@ related: start-feature, code-review, accept-phase, complete-feature
 - **Feature ID**: {{feature_id}}
 - **Feature Path**: {{feature_path}}
 - **Mode**: {{mode}}
+- **Workflow Mode**: {{workflow_mode}}
 
 ---
 
@@ -36,10 +37,14 @@ This procedure is DONE when:
 - [ ] Current state identified (entry point determined)
 - [ ] Phase status synchronized in BOTH phase file and FeatureTasks.md (PENDING/IN_PROGRESS/AWAITING_USER_ACCEPTANCE)
 - [ ] Canonical planning document `planning-analysis-report.md` created or refreshed during Phase 1
+- [ ] Feature implementation context reviewed, including what is already completed in this feature
+- [ ] Parent epic and epic baseline/support documents reviewed when linked
+- [ ] Upstream and downstream dependency context reviewed when relevant
 - [ ] All tasks in current phase implemented following Gherkin specs
 - [ ] Each task status maintained in real time (PENDING -> IN_PROGRESS -> COMPLETED/SKIPPED)
 - [ ] Required context documents read in order at each task start/resume
 - [ ] Later phases reuse `planning-analysis-report.md` instead of creating new per-phase planning files
+- [ ] Downstream phase/feature dependencies reflected in implementation and test strategy
 - [ ] Git commits tracked in both task-level and phase-level tables
 - [ ] Build: 0 errors, 0 warnings
 - [ ] Tests: 100% passing
@@ -48,7 +53,7 @@ This procedure is DONE when:
 - [ ] LessonsLearned document created for the phase
 - [ ] Checkpoint status maintained in real time (NOT STARTED -> IN_PROGRESS -> COMPLETE)
 - [ ] Phase status set to AWAITING_USER_ACCEPTANCE
-- [ ] User acceptance requested
+- [ ] Acceptance handoff completed (user requested in interactive mode, `accept-phase` auto-invoked in autonomous mode)
 
 ---
 
@@ -83,14 +88,53 @@ This procedure is DONE when:
 Verify these exist:
 - `FeatureDescription.md`, `FeatureTasks.md`, `Phases/` folder, `start-feature-report-*.md`
 
-### 1.3 Read Project Context
+### 1.3 Read Feature, Epic, and Dependency Context
+
+Before choosing work, read enough context to understand:
+- what is already done in this feature
+- what remains in the current phase
+- what later phases in this feature depend on
+- what upstream epic features/artifacts already exist and should be reused
+- what downstream epic features will depend on artifacts produced now
+
+Read and internalize, at minimum:
+1. `FeatureDescription.md`
+2. `FeatureTasks.md`
+3. Current phase file
+4. All previously completed phase files in `Phases/`
+5. Relevant `code-reviews/` and `LessonsLearned/` artifacts for already-completed phases, if present
+6. Existing `planning-analysis-report.md`, if present
+7. Later phase summaries in `FeatureTasks.md` and downstream phase files as needed to understand future dependencies
+
+If the feature is linked to a parent epic:
+1. Read `EpicDescription.md`
+2. Read epic acceptance docs when present: `AcceptanceTest*.md`, `AcceptanceTests*.md`
+3. Read epic baseline design/support docs when present, especially files matching:
+   - `*baseline*design*.md`
+   - `*design*baseline*.md`
+   - `*baseline*acceptance*.md`
+   - `*acceptance*baseline*.md`
+4. Identify upstream and downstream related features from the epic's Features Breakdown, Progress Tracking, and Dependency Flow Diagram
+5. Read the minimum relevant context from those related features:
+   - `FeatureDescription.md`
+   - `FeatureTasks.md` if present
+   - relevant phase files / completion artifacts when implementation or testing details matter
+
+Create an internal context map with:
+- **Already done**: completed work and stable artifacts in this feature
+- **Current responsibility**: outputs to produce in the active phase/task
+- **Downstream within feature**: later phases that will rely on today's outputs
+- **Upstream across epic**: reusable artifacts and constraints from related features
+- **Downstream across epic**: future features that will consume current outputs/contracts
+
+### 1.4 Read Project Context
 
 Read and internalize:
 - `{MEMORY_BANK_PATH}/Overview/` — project vision and goals
 - `{MEMORY_BANK_PATH}/Architecture/` — components, patterns, layers
 - `{MEMORY_BANK_PATH}/CodeGuidelines/` — standards and technologies
 
-### 1.4 Extract Build/Test/Lint Commands
+### 1.5 Extract Build/Test/Lint Commands
 
 From project documentation, identify build, test, and lint commands.
 **If not found** → ask user before proceeding.
@@ -109,7 +153,7 @@ Read `FeatureTasks.md` and the current phase file to determine entry point:
 | **Checkpoint Pending** | All tasks COMPLETED, checkpoint not filled | Go to Phase 4 |
 | **Validation Failed** | Checkpoint InProgress with failures | Fix issues, re-validate |
 | **Finalization Reconciliation Needed** | Tasks complete + checkpoint complete + review approved + gates pass, but phase/FeatureTasks status not AWAITING_USER_ACCEPTANCE | Run Phase 5.6 immediately |
-| **Awaiting Acceptance** | Phase AWAITING_USER_ACCEPTANCE | Present summary, wait for user |
+| **Awaiting Acceptance** | Phase AWAITING_USER_ACCEPTANCE | Interactive: present summary and wait for user. Autonomous: invoke `accept-phase` immediately. |
 
 ### 2.0 Phase Activation (FIRST WRITE OPERATION, MANDATORY)
 
@@ -142,6 +186,21 @@ If phase status differs between files, fix both immediately before continuing.
 
 If `Mode` is `finalize_current_phase`, skip task execution and go directly to Phase 5 for validation + reconciliation.
 Use this when tasks/checkpoint/review are done but statuses were not finalized.
+
+### 2.3 Workflow Mode
+
+Workflow modes:
+
+| Workflow Mode | Behavior |
+|---------------|----------|
+| Interactive (default) | Stop at normal user checkpoints such as phase acceptance and additional lessons input |
+| `autonomous` | Continue through code review, phase acceptance, next phases, and final feature completion without routine user prompts |
+
+Rules for `Workflow Mode = autonomous`:
+1. Keep all quality gates and validations exactly the same.
+2. Do not pause merely to ask the user to run `code-review`, `accept-phase`, `continue-implementation`, or `complete-feature`.
+3. Instead, invoke those MCP commands yourself when their preconditions are satisfied.
+4. Stop only for true blockers: failing quality gates, missing required project commands, ambiguous/incomplete specs, unresolved review issues after retry limits, or cases where user judgment is explicitly required.
 
 ---
 
@@ -200,6 +259,9 @@ For each task in subsequent phases, add:
 - Pattern references from codebase search
 - Files to create/modify
 - Dependencies and testing approach
+- What is already available from previous phases or upstream features
+- What downstream phases/features will rely on this task's outputs
+- What contract/regression tests are needed so future work can safely consume these outputs
 
 For complex tasks, create code sample files in `Phases/code-samples/task-{N}-{M}-{name}.md`.
 
@@ -207,9 +269,14 @@ For complex tasks, create code sample files in `Phases/code-samples/task-{N}-{M}
 
 Create or update the feature-root file `planning-analysis-report.md` with:
 - Executive summary of implementation approach
+- Current feature progress snapshot (what is already done vs remaining)
+- Parent epic context and baseline constraints (if linked)
+- Upstream/downstream dependency map across related features
 - Implementation type distribution table
 - Key patterns identified with sources
 - Phase-by-phase implementation guidance table
+- Downstream dependency obligations table for later phases/features
+- Test strategy for current work, regression coverage, and reusable contracts/artifacts
 - Risk assessment table (risk, likelihood, impact, mitigation)
 - Dependencies identified
 - Tasks enriched summary
@@ -221,15 +288,19 @@ The phase-by-phase implementation guidance table must cover, at minimum:
 - Expected files/modules to touch
 - Dependencies and prerequisites
 - Testing focus
+- What later phases depend on outputs from this phase
 - Notes for follow-up phases so they can execute without re-planning
 
 ### 3.6 Phase 1 Completion Checks
 
 Before completing Phase 1, verify:
+- [ ] Feature history and already-completed work summarized
+- [ ] Parent epic context and related-feature dependencies summarized (if linked)
 - [ ] All tasks classified by implementation type
 - [ ] CodeGuidelines/Architecture/LessonsLearned summaries created
 - [ ] Codebase searched for reusable patterns
 - [ ] Tasks enriched with implementation guidance or code sample references
+- [ ] Downstream phase/feature test obligations captured
 - [ ] `planning-analysis-report.md` exists in the feature root with the canonical filename
 - [ ] **No code written** — Phase 1 is analysis only
 
@@ -261,34 +332,48 @@ Precondition check:
 ### 4.2 Gather Task Context
 
 Read context in this exact order for EACH task start/resume:
-1. **Parent Epic** (if linked in FeatureDescription)
-2. **Epic AcceptanceTests** (if present)
-3. **Epic baseline design** (if present)
-4. **FeatureDescription.md** (required)
-5. **UX-research-report.md** (if present)
-6. **Wireframes-design.md** (if present)
-7. **design-summary.md** (if present)
-8. **planning-analysis-report.md** (required for Phases 2-8; create/refresh it during Phase 1)
-9. **All referenced features (FEAT-XXX)**, whether implemented or not
+1. **FeatureDescription.md** (required)
+2. **FeatureTasks.md** (required)
+3. **Current phase file** (required)
+4. **Previously completed phase files** in this feature (required where they exist)
+5. **Relevant code reviews / LessonsLearned / completion artifacts** for already-completed phases (if present)
+6. **Parent Epic: EpicDescription.md** (if linked in FeatureDescription)
+7. **Epic AcceptanceTests** (if present)
+8. **Epic baseline design / support docs** (if present)
+9. **UX-research-report.md** (if present)
+10. **Wireframes-design.md** (if present)
+11. **design-summary.md** (if present)
+12. **planning-analysis-report.md** (required for Phases 2-8; create/refresh it during Phase 1)
+13. **Downstream phases in this feature** that will rely on current outputs
+14. **All referenced or related features (FEAT-XXX)**, prioritizing implemented/in-progress upstream features first, then downstream consumers
 
 Then collect task-specific implementation context:
 1. **Requirements**: User story, Gherkin specs, data requirements, business rules
 2. **Design context**: `design-summary.md`, `UX-research-report.md`, `Phases/code-samples/`, `planning-analysis-report.md`
 3. **Standards**: `{MEMORY_BANK_PATH}/CodeGuidelines/`
+4. **Dependency/test context**: what already exists, what this task changes now, what downstream phases/features will consume, and what tests must protect those contracts
 
 Implementation notes:
 - If an optional source is missing, note `N/A` and continue.
 - For referenced FEATs, read at least `FeatureDescription.md` and `FeatureTasks.md` (and relevant phase files when dependency details are needed).
+- Do not treat the parent epic as a label only. If linked, read `EpicDescription.md` and any baseline docs as implementation inputs.
+- For already-completed work in this feature, confirm existing outputs/tests before changing related code.
+- For downstream phases/features, identify the artifacts/contracts they will depend on and protect them with appropriate tests now.
 - For Phases 2-8, `planning-analysis-report.md` is mandatory context. Do not create a new phase-specific planning file or redo planning from scratch.
 - If `planning-analysis-report.md` is missing in Phase 2-8, first search the feature folder for legacy planning filenames and consolidate them into `planning-analysis-report.md`. If none exist, reconstruct the document from the Phase 1 file plus feature/design docs before proceeding.
 - If later implementation changes a material architectural or sequencing decision, update `planning-analysis-report.md` in place instead of creating a new planning artifact.
 - Do not start implementation until this context pass is complete and summarized briefly in task notes.
+- The task-notes summary must state:
+  - what is already done and being reused
+  - what this task adds/changes now
+  - what later phases/features depend on these outputs
+  - what tests cover both current behavior and downstream contract safety
 
 ### 4.3 Implement
 
 Follow the Gherkin behavior specs (Given/When/Then):
 1. Write code following behavior spec and project standards
-2. Write corresponding unit tests
+2. Write corresponding unit tests plus any required regression/contract tests for downstream phase or feature consumers
 3. Run build → fix errors
 4. Run tests → fix failures
 5. Commit changes
@@ -380,6 +465,9 @@ Fix any failures before proceeding.
 
 **Skip** for: Phase 0, 1, 8, config-only, doc-only, DTO-only phases
 **Require** for: Phases with business logic, presentation, UI, data access, integration
+
+Do not ask the user to run `code-review`.
+When review is required, invoke the MCP command yourself as part of this procedure.
 
 Invoke the `code-review` MCP command:
 ```
@@ -483,7 +571,7 @@ Create `{MEMORY_BANK_PATH}/LessonsLearned/{{feature_id}}/Phase-{N}-{name}.md`:
 
 ---
 
-## Phase 7: Request User Acceptance
+## Phase 7: Acceptance Handoff
 
 Present phase completion summary:
 
@@ -505,21 +593,35 @@ Present phase completion summary:
 **To Reject**: Provide specific feedback
 ```
 
+### If `Workflow Mode` is interactive or not provided
+
 **WAIT** for user response. Do not proceed without explicit acceptance.
 
-### On Acceptance
+#### On Acceptance
 1. Instruct user to run `accept-phase` to formalize acceptance
 2. Do NOT mark phase as COMPLETED in this procedure
 3. Do NOT create the phase-completion commit here
 4. Keep status as `AWAITING_USER_ACCEPTANCE` until `accept-phase` runs
 5. Preview next phase (do NOT auto-start)
 
-### On Rejection
+#### On Rejection
 1. Document feedback in phase notes
 2. Revert status to `IN_PROGRESS`
 3. Update `FeatureTasks.md` phase row back to `IN_PROGRESS`
 4. Address feedback, re-run validation
 5. Request acceptance again
+
+### If `Workflow Mode = autonomous`
+
+1. Do not wait for a user reply.
+2. Immediately invoke `accept-phase` with:
+   - `feature_id={{feature_id}}`
+   - `phase_number={current_phase_number}`
+   - `feature_path=[resolved path if known]`
+   - `workflow_mode=autonomous`
+3. Do not create the phase-completion commit here; `accept-phase` owns that transition.
+4. Keep status as `AWAITING_USER_ACCEPTANCE` until `accept-phase` runs.
+5. If `accept-phase` cannot proceed because a blocker requires human judgment, stop and report the blocker clearly.
 
 ---
 
@@ -538,7 +640,7 @@ Every phase MUST pass before acceptance:
 | Code Review | APPROVED or APPROVED_WITH_NOTES (for code phases) |
 | Code Review History | All reviews documented |
 | LessonsLearned | Document created |
-| User Acceptance | Explicit approval via accept-phase |
+| User Acceptance | Explicit approval via `accept-phase` (user-triggered in interactive mode, auto-invoked in autonomous mode) |
 
 **No shortcuts.** The `accept-phase` command validates ALL requirements.
 
