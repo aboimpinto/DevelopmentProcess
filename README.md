@@ -240,3 +240,25 @@ All prompt templates follow a consistent structure:
 ## Error Recovery  — Scenario/action table
 ## Related Commands
 ```
+
+
+## Hosted Deep-Dive UI clients
+
+Call `deep-dive` with `file_path`, `response_mode: "host_stage"`, and one stage:
+`opening`, `follow_up`, `clarify`, or `apply_answers`. The response is a stateless
+procedure under `deep_dive_host_contract.version: devcycle-deep-dive-host/v1`.
+The model executes only that stage against the host-supplied context snapshot.
+
+The host owns UI prompts, saved answers, validation, and target-file persistence.
+Hosted stages have an empty mutation scope and do not invoke tools or another
+recipe. Opening/follow-up return the existing question JSON shape; clarification
+returns text; apply-answers returns target Markdown. Missing stages or unknown
+modes fail rather than entering the full interactive interview. Calls without
+`response_mode` retain the existing interactive recipe. Standard MCP `arguments`
+and legacy `input` tool-call payloads are supported.
+
+Procedures live in `DevCycleManager/Prompts/deep-dive-host/`. Run
+`python -m unittest discover -s DevCycleManager` with the project dependencies
+installed, or mount that directory into the project's built image at `/app` and
+run `python -m unittest discover` there. No paid model or production workflow is
+required for these contract checks.

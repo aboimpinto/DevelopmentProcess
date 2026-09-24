@@ -6,6 +6,7 @@ from typing import Optional, Union, List, Any, Dict
 
 from fastapi import FastAPI, Response, status
 from pydantic import BaseModel, Field
+from deep_dive_host import HOST_STAGES, hosted_deep_dive_recipe
 
 # --- Constants & Configuration ---
 # Path to the directory containing prompt/config files
@@ -570,7 +571,7 @@ async def run_complete_feature(feature_id: str, feature_path: Optional[str] = No
         "message": "Execute the complete-feature procedure. This validates all phases are complete, compiles Lessons Learned, creates completion reports, and moves the feature to 04_COMPLETED. In `workflow_mode=autonomous`, use auto-detected lessons only instead of pausing for extra user input. Running this command is confirmation to proceed (no extra yes/no gate)."
     }
 
-async def run_deep_dive(file_path: str) -> dict:
+async def run_deep_dive(file_path: str, response_mode: Optional[str] = None, stage: Optional[str] = None) -> dict:
     """
     The Recipe for conducting a deep-dive interview about a spec file.
     Guides the LLM through an intensive interview process to gather comprehensive
@@ -582,6 +583,10 @@ async def run_deep_dive(file_path: str) -> dict:
     5. Read and incorporate referenced documents
     6. Update the spec file with gathered information
     """
+    if response_mode == "host_stage":
+        return hosted_deep_dive_recipe(PROMPTS_DIR, file_path, stage)
+    if response_mode not in (None, "adaptive_interview") or stage is not None:
+        raise ValueError("Unsupported deep-dive response mode or stage")
     # Load the procedure template
     try:
         with open(PROMPTS_DIR / "deep-dive.md", "r", encoding="utf-8") as f:
@@ -838,7 +843,9 @@ async def json_rpc_handler(request: JsonRpcRequest):
                     "inputSchema": {
                         "type": "object",
                         "properties": {
-                            "file_path": {"type": "string", "description": "The path to the spec file to deep-dive into (e.g., {memory_bank}/Features/01_SUBMITTED/FEAT-001-feature-name/FeatureDescription.md)"}
+                            "file_path": {"type": "string", "description": "The path to the spec file to deep-dive into (e.g., {memory_bank}/Features/01_SUBMITTED/FEAT-001-feature-name/FeatureDescription.md)"},
+                            "response_mode": {"type": "string", "enum": ["adaptive_interview", "host_stage"], "default": "adaptive_interview"},
+                            "stage": {"type": "string", "enum": list(HOST_STAGES), "description": "Required with host_stage; returns a read-only procedure for one host-owned interview turn."}
                         },
                         "required": ["file_path"]
                     }
@@ -848,7 +855,7 @@ async def json_rpc_handler(request: JsonRpcRequest):
 
     elif request.method == "tools/call":
         tool_name = request.params.get("name")
-        tool_args = request.params.get("input", {})
+        tool_args = request.params.get("arguments", request.params.get("input", {}))
 
         try:
             if tool_name == "init-project":
@@ -922,7 +929,9 @@ async def json_rpc_handler(request: JsonRpcRequest):
                 )
             elif tool_name == "deep-dive":
                 result = await run_deep_dive(
-                    file_path=tool_args.get("file_path")
+                    file_path=tool_args.get("file_path"),
+                    response_mode=tool_args.get("response_mode"),
+                    stage=tool_args.get("stage")
                 )
             else:
                 raise ValueError(f"Unknown tool: {tool_name}")
