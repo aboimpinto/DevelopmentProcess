@@ -646,6 +646,13 @@ def enrich_execution_contract(result: dict, tool_name: str) -> dict:
     result.setdefault("contract_version", "1.0")
     result.setdefault("tool_name", tool_name)
 
+    if status_value == "pending_execution" and tool_name in {
+        "refine-feature", "start-feature", "continue-implementation",
+        "code-review", "accept-phase", "complete-feature",
+    }:
+        scope_policy = (PROMPTS_DIR / "phase-scope-policy.md").read_text(encoding="utf-8")
+        result["instructions"] = scope_policy + "\n\n" + result["instructions"]
+
     if status_value == "pending_execution":
         # This is a successful tool call that returns a recipe for client-side execution.
         result.setdefault("tool_call_success", True)
