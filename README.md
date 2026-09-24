@@ -252,7 +252,10 @@ The model executes only that stage against the host-supplied context snapshot.
 The host owns UI prompts, saved answers, validation, and target-file persistence.
 Hosted stages have an empty mutation scope and do not invoke tools or another
 recipe. Opening/follow-up return the existing question JSON shape; clarification
-returns text; apply-answers returns target Markdown. Missing stages or unknown
+returns text; apply-answers returns a versioned `deep-dive.edits` JSON exchange
+with exact, non-overlapping before/after excerpts from the current target. The
+host preserves untouched content and refuses stale-source writes. The complete
+edit schema is supplied once in the returned instructions. Missing stages or unknown
 modes fail rather than entering the full interactive interview. Calls without
 `response_mode` retain the existing interactive recipe. Standard MCP `arguments`
 and legacy `input` tool-call payloads are supported.

@@ -23,12 +23,13 @@ def hosted_deep_dive_recipe(prompts_dir: Path, file_path: str, stage: str) -> di
             "version": HOST_CONTRACT, "stage": stage,
             "target_file": file_path.strip(), "mutation_scope": [],
             "output": "questions_json" if stage in ("opening", "follow_up") else
-                      "target_markdown" if stage == "apply_answers" else "clarification_text",
+                      "target_edits_json" if stage == "apply_answers" else "clarification_text",
         },
     }
-    if stage in ("opening", "follow_up"):
-        schema = json.loads((directory / "questions-v1.schema.json").read_text(encoding="utf-8"))
-        # The single schema in the returned instructions defines both hosted
-        # question stages. The client enforces the stage-specific cardinality.
+    if stage in ("opening", "follow_up", "apply_answers"):
+        schema_name = "edits-v1.schema.json" if stage == "apply_answers" else "questions-v1.schema.json"
+        schema = json.loads((directory / schema_name).read_text(encoding="utf-8"))
+        # Supply only the selected output schema. The host validates the same
+        # versioned contract and enforces stage-specific cardinality/authority.
         result["instructions"] += "\n\nReturn JSON matching this schema:\n" + json.dumps(schema, indent=2)
     return result

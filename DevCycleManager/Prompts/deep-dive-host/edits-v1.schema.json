@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HEPHA exchange envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "kind",
+    "payload"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "hepha-exchange/v1"
+    },
+    "kind": {
+      "const": "deep-dive.edits"
+    },
+    "payload": {
+      "title": "Hosted Deep-Dive exact edits v1",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "edits"
+      ],
+      "properties": {
+        "edits": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "before",
+              "after"
+            ],
+            "properties": {
+              "before": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              },
+              "after": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "audit": {
+      "description": "Optional non-authoritative metadata, normalized separately."
+    }
+  }
+}

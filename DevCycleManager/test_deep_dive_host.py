@@ -21,12 +21,15 @@ class HostedDeepDiveTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(recipe["deep_dive_host_contract"]["version"], HOST_CONTRACT)
                 self.assertEqual(recipe["deep_dive_host_contract"]["stage"], stage)
                 self.assertEqual(recipe["deep_dive_host_contract"]["mutation_scope"], [])
+                expected = "target_edits_json" if stage == "apply_answers" else "clarification_text" if stage == "clarify" else "questions_json"
+                self.assertEqual(recipe["deep_dive_host_contract"]["output"], expected)
                 instructions = recipe["instructions"]
                 self.assertIn("Only saved answers authorize product decisions", instructions)
                 self.assertEqual(instructions.count("Contract: devcycle-deep-dive-host/v1"), 1)
-                if stage in ("opening", "follow_up"):
+                if stage in ("opening", "follow_up", "apply_answers"):
                     self.assertEqual(instructions.count('"$schema"'), 1)
-                    self.assertNotIn("## Apply saved answers", instructions)
+                    if stage != "apply_answers":
+                        self.assertNotIn("## Apply saved answers", instructions)
                 else:
                     self.assertNotIn('"$schema"', instructions)
 
@@ -43,6 +46,14 @@ class HostedDeepDiveTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["status"], "pending_execution")
         self.assertNotIn("deep_dive_host_contract", result)
         self.assertIn("/memory/target.md", result["instructions"])
+
+    async def test_legacy_input_and_standard_argument_precedence(self):
+        legacy = {"file_path": "/memory/target.md", "response_mode": "host_stage", "stage": "clarify"}
+        for params, stage in (({"input": legacy}, "clarify"),
+                              ({"input": legacy, "arguments": {**legacy, "stage": "opening"}}, "opening")):
+            response = await json_rpc_handler(JsonRpcRequest(jsonrpc="2.0", id=3, method="tools/call", params={"name": "deep-dive", **params}))
+            self.assertIsNone(response.error)
+            self.assertEqual(response.result["structuredContent"]["deep_dive_host_contract"]["stage"], stage)
 
 
 if __name__ == "__main__":
