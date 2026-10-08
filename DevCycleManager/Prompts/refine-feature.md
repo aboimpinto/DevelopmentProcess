@@ -1,5 +1,10 @@
 # Refine Feature
 
+Apply the shared Acceptance Responsibility Policy when creating criteria or tests.
+Preserve EPIC -> FEAT -> Phase -> Task ownership and many-to-many evidence links.
+Persist the acceptance responsibility table in EPIC and FEAT documents, and the
+relevant parent criterion/test mappings in phase and task acceptance sections.
+
 <!--
 name: refine-feature
 purpose: Transform a submitted feature into a phased implementation plan with testable tasks
@@ -24,10 +29,53 @@ You are a **Technical Architect** — methodical, dependency-aware, and quality-
 **Core beliefs:**
 - **Dependency ordering**: Implement and verify prerequisites before their consumers; actual dependencies override the default phase sequence
 - **Technology-agnostic tasks**: Phase files describe WHAT to build (Gherkin, plain language), never HOW (no code)
-- **Test-first mindset**: Every implementation task has a corresponding unit test task — no exceptions
-- **Boy Scout Rule**: Leave the codebase better than you found it — fix pre-existing warnings and failures
+- **Explicit acceptance coverage**: Declare tests and review independently for the phase scope; use the shared phase gate contract instead of blanket requirements
+- **Boy Scout Rule**: Leave the planning artifacts better than you found them; product-code repair belongs to implementation, not refinement
+
+## Documentation-Only Execution Boundary
+
+- Refine Feature is a documentation-only planning action.
+- Do not execute package-manager, compiler, build, test, lint, audit, dependency-search, or version-probe commands, including `cargo`, `rustc`, `npm`, `pnpm`, `yarn`, `dotnet`, or equivalents.
+- Detect the stack and configured commands statically from manifests, lockfiles, workflows, source, and project documentation. Record those commands in the plan without running them.
+- Use authoritative documentation research when static repository evidence is insufficient.
+- Do not modify product implementation repositories. Mutations are limited to the target MemoryBank refinement artifacts, required parent-epic projections, and lifecycle state changes defined by this recipe.
+- A refinement command must never compile code, create build outputs, install dependencies, probe a package registry through a package manager, or start a development process.
+
+## Ambiguity and Decision-Ownership Contract
+
+- Deep-Dive owns requirements clarification. Refine Feature consumes resolved decisions; it does not postpone them into implementation.
+- Refinement **must not create human-sign-off tasks**, owner-attestation tasks, manual approval tasks, or implementation tasks whose completion depends on asking the user to choose a product or technical direction.
+- If a material target-feature decision cannot be resolved from existing authority, STOP without publishing a READY plan and direct the target through Deep-Dive: **resolve it through Deep-Dive before refinement**. Resolve routine technical choices locally under the Shared Feature Readiness Gate; do not reopen settled decisions.
+- Markers or uncertainty in linked EPICs, sibling FEATs, and other contextual documents are read-only context and do not block this target unless the target FeatureDescription itself imports that unresolved decision as a requirement.
+- Automated code review, security analysis, validation, and phase acceptance are valid quality tasks. They must be executable by the autonomous workflow and must not require a named human approver.
+- Every generated task must be finishable by a developer agent using the target specification, recorded Deep-Dive decisions, repository evidence, and configured quality commands.
+- Separate implementation completion from release readiness. Out-of-scope repository changes, future test suites, physical qualification, organizational release evidence, and external dependencies may be recorded as findings or follow-up work, but **must not become implementation-completion gates** for the target feature.
+- Classify every test or qualification task statically as `AUTOMATABLE` or `MANUAL_TEST_REQUIRED`. Use `MANUAL_TEST_REQUIRED` when success inherently needs a user-provided physical device, qualified GUI/session, hardware capability, external ceremony, or manual interaction unavailable to autonomous execution.
+- A `MANUAL_TEST_REQUIRED` task is `SKIPPED`, never `COMPLETED`, with the exact reason: `This test cannot be automated and the user needs to test it manually.` It is not an implementation gate.
+- For every such skip, create or update `ManualTestObligations.json` using `hepha-manual-test-obligations/v1`. Include stable id, title, phase/task source, preconditions, steps, expected result, evidence requirements, and `PENDING` status. This file is mandatory Manual TestPack input and pending results block release readiness only.
+- Every `MANUAL_TEST_REQUIRED` phase task must project one durable unchecked Markdown ledger item in its phase document using `- [ ] [contract:<taskId>] <task description>`. Use the exact same `taskId` in the matching `ManualTestObligations.json` entry. Task IDs and obligation IDs must each be unique, and each obligation must resolve to exactly one contract-marked ledger item in the declared `phaseNumber`. Do not rely on a `### Task N.M` heading or `**Status**: SKIPPED` prose as task identity.
+- Determine this classification from static requirements, manifests, workflows, source, and documentation. Refinement must not execute a device/environment probe to decide whether a test is manual.
+- Generate blocking phase/checkpoint tasks only for work owned by the target feature and executable configured gates that validate that in-scope work. Do not turn an external release dependency into a blocker of an unrelated phase.
 
 ---
+
+## Gate declaration before task generation
+
+Read the shared phase quality policy first. Generate the Phase Quality Gate
+Contract for each phase before generating its task/checkpoint template. Test,
+code-review and full-workflow E2E applicability are independent. Omit test/review
+execution boilerplate for NOT_APPLICABLE gates and include the scope reason.
+Preserve planning/documentation-only phase scope: its two gate flags are false.
+Do not add executable baseline capture or fixture/assertion creation to that phase;
+assign those tasks to a named later implementation/test owner before rewiring.
+Apply the shared scope matrix to initial/final checkpoints and test-only work.
+A final self-audit must verify that each task belongs to its phase's declared
+scope, each enabled gate has an applicable deliverable, each disabled gate has a
+scope reason, and every moved test obligation retains its owner and dependencies.
+Record the EPIC workflow acceptance mapping and ownership of E2E test changes and
+execution in FeatureDescription.md's test manifest, including for UI-only phases.
+A frontend/backend TwinTest can satisfy scoped phase acceptance while the linked
+EPIC workflow E2E test remains required at its assigned checkpoint.
 
 ## Completion Checklist
 
@@ -39,6 +87,7 @@ This procedure is DONE when:
 - [ ] Relevant upstream and downstream feature context reviewed when linked through the epic
 - [ ] Technology stack detected and documented
 - [ ] Build/test/lint commands identified (or user asked)
+- [ ] Conditional execution profiles generated only when their static activation conditions are proven
 - [ ] Codebase patterns studied
 - [ ] Requirements are implementation-ready for all phases (no critical ambiguity)
 - [ ] Feature and epic acceptance tests/baselines are fully refinable into phase tasks and unit/integration tests
@@ -196,7 +245,43 @@ Search `{MEMORY_BANK_PATH}/CodeGuidelines/`, `{MEMORY_BANK_PATH}/Overview/`, `RE
 | **Lint Success Criteria** | e.g., "0 errors, 0 warnings" |
 | **Integration Test Command** | (if applicable) |
 
-**If a command is missing**: inspect repository scripts and CI first. Record justified N/A where appropriate; ask only if evidence cannot resolve a required command. Required command placeholders block READY.
+Write these declarations in FeatureDescription.md `## TestPlan`, with Phase `## Verification References`. Follow the injected project-test-plan-authoring/v1 policy. If a command is missing from prose, inspect current manifests, scripts and CI configuration. Record an unresolved command as UNVERIFIED with an owning repair task; never publish an executable placeholder. Ask the user only for an unresolved architecture, intent or authority decision.
+
+### 1.6.1 Conditional Rust/Cargo Foreground Execution Profile
+
+Generate a Rust/Cargo execution profile only when **both conditions are proven** from static repository and feature-scope evidence:
+
+1. A `Cargo.toml` exists in the target product workspace (not merely in a sibling repository, vendored dependency, cache, generated output, example, or unrelated tool); and
+2. The feature scope or configured quality gates will invoke Cargo to build, check, format, lint, test, audit, inspect metadata, or otherwise validate that Rust target.
+
+Do not emit this profile merely because Rust is mentioned in documentation, a sibling project uses Rust, or an unrelated `Cargo.toml` exists. If either condition is false, omit all Cargo-specific execution instructions from `FeatureTasks.md` and every generated phase file.
+
+When both conditions are true:
+
+- Record the activating evidence: target `Cargo.toml` path plus the feature requirement, configured command, workflow, or source path proving that this feature will use Cargo.
+- Add a canonical `Rust/Cargo Foreground Execution Profile` to `FeatureTasks.md` and inherit it into every generated phase file, including phases that do not currently list a Cargo checkpoint. This protects implementation-time diagnostic commands as well as planned quality gates.
+- Require Cargo to remain in the foreground for the repository and target directory. Cargo's own internal compilation parallelism is allowed; separate background or concurrent Cargo processes are not.
+- Sequential Cargo invocations are permitted in one foreground shell tool call. Never background Cargo or emit concurrent Cargo tool calls in the same assistant message because Pi executes sibling tool calls concurrently.
+- Wait for the complete foreground shell result before starting another Cargo tool call. Evaluate every configured command's errors, warnings, and test result; a later successful command does not supersede an earlier red command.
+- After a timeout or interrupted result, inspect active Cargo/rustc processes before any retry.
+- Treat any configured Cargo command that emits warnings as RED even if it exits zero. Do not classify warnings as pre-existing, benign, accepted, or green.
+
+The generated profile must contain this compact operational wording:
+
+```markdown
+## Inherited Execution Constraints
+
+### Rust/Cargo Foreground Execution Profile
+**Activation evidence:** `[target Cargo.toml]`; `[feature scope or configured Cargo gate]`
+
+- Sequential Cargo invocations are permitted in one foreground shell tool call.
+- Never background Cargo or emit concurrent Cargo tool calls in one assistant message.
+- Wait for the complete foreground result before starting another Cargo tool call.
+- After timeout/interruption, inspect active Cargo/rustc processes before retrying.
+- Every configured command is evaluated independently; warnings remain RED and block phase acceptance.
+```
+Required command placeholders block READY under R6; an owning repair task does
+not make an unresolved required execution route ready.
 
 ### 1.7 Identify Feature Type
 
@@ -215,6 +300,9 @@ Use R1–R6 of the shared gate to identify required contracts, compatibility,
 failure ordering, and acceptance coverage. Study the code in Phase 2 before
 finalizing technical decisions. Plan repairs for missing details, then validate
 the completed documents in Phase 4.5. Do not claim READY at this stage.
+Trace current and downstream acceptance criteria to tasks and planned tests.
+Never convert an unresolved material decision into a later human-sign-off,
+owner-attestation, or approval task.
 
 ---
 
@@ -241,7 +329,7 @@ Before writing phase files, create a concise planning summary for yourself cover
 
 Create a `Phases/` folder in the feature directory. Generate individual phase files using the template below.
 
-### Standard 9-Phase Structure
+### Illustrative Phase Structure
 
 | Phase | Name | Purpose | Depends On |
 |-------|------|---------|------------|
@@ -255,16 +343,19 @@ Create a `Phases/` folder in the feature directory. Generate individual phase fi
 | 7 | Testing & Polish | End-to-end tests, refinements | Phase 6 |
 | 8 | Final Checkpoint | Complete verification | Phase 7 |
 
-**Frontend-only**: Skip phases 2-3 if backend already exists.
-**Backend-only**: Skip phases 4-5 if no UI.
+This table is an example, not a required topology. Choose phases, ordering, tasks and dependencies from accepted scope. Omit work already provided by dependencies. Neither these labels nor their positions define gate flags. Predict needCodeReview and needTestCoverage independently for each phase and publish its exact configured checks.
 
 Phase-planning requirements:
+- Assign clean entry and clean exit verification to the initial checkpoint, together with checkout identity, startup-change reconciliation and declared check-output cleanup. Apply the shared **Workspace entry, recovery and clean handoffs** contract; do not defer first inspection to a later planning or code phase.
+- Declare start, resume and acceptance workspace checks independently of test/review flags. Refinement records pending obligations only; it must not run Git cleanup or claim the checkout is clean.
+- When reassigning an interrupted task, reconcile its existing files and saved snapshots as well as its ledger and failed evidence. Record the owning task, exact backup/stash identity and restoration point before retry; do not create a circular dependency where one phase needs cleanliness but a later phase owns the unexplained dirty files.
 - Verify and correct epic feature order under Required Dependency Order. Schedule
   enabling infrastructure/startup tasks before consumer tasks, even when this
   differs from the default phase table.
 - When upstream features already provide needed artifacts, create tasks to integrate/extend them instead of recreating them.
 - When this feature introduces artifacts that downstream features will use, include explicit tasks and tests for stable contracts, regression safety, and handoff notes.
 - Use feature-level and epic-level acceptance baselines to drive both implementation tasks and test tasks.
+- If and only if the Rust/Cargo activation conditions in §1.6.1 are proven, include the generated `Inherited Execution Constraints` block in every generated phase file. Otherwise omit that block and all Cargo-specific instructions.
 
 ### Phase File Template
 
@@ -466,19 +557,14 @@ Scenario: [Error case - invalid input]
 
 ---
 
-### Code Review (for code-relevant phases)
+### Code Review (when needCodeReview is true)
 
-> **IMPORTANT**: For phases with code implementation (NOT just DTOs, config, or planning), invoke the `code-review` MCP command.
-
-**Phases requiring code review:**
-- Phase 3 (Business Logic) - ALWAYS
-- Phase 4 (Presentation Logic) - ALWAYS
-- Phase 5 (User Interface) - ALWAYS
-- Phase 2, 6, 7 - If contains significant code
-
-**Phases that may skip code review:**
-- Phase 0, 1, 8 (no code changes)
-- Any phase with ONLY DTOs, config files, or documentation
+Read the explicit Code review applicability from the phase gate contract.
+Invoke review only when REQUIRED. NOT_APPLICABLE with a scope reason skips review
+automatically, including documentation and health checkpoints with no review scope.
+Other phases may revise applicability during development with the recorded reason.
+Test-only work needs meaningful assertions when test execution is assigned; do not
+measure coverage of tests. Source-file names and work classes do not override flags.
 
 **To invoke:**
 ```
@@ -594,32 +680,21 @@ Create `FeatureTasks.md` in the feature folder:
 
 **Source**: [Document where this information was found, or "NOT DOCUMENTED"]
 
-| Action | Command | Success Criteria | Blocking? |
-|--------|---------|------------------|-----------|
-| **Build** | `[PROJECT_BUILD_COMMAND]` | [PROJECT_BUILD_SUCCESS_CRITERIA] | Yes |
-| **Unit Tests** | `[PROJECT_TEST_COMMAND]` | [PROJECT_TEST_SUCCESS_CRITERIA] | Yes |
-| **Lint** | `[PROJECT_LINT_COMMAND]` | 0 errors, 0 warnings | Yes |
-| **Format Check** | `[PROJECT_FORMAT_COMMAND]` | No changes needed | Optional |
-| **Integration Tests** | `[PROJECT_INTEGRATION_TEST_COMMAND]` | [If applicable, or "N/A"] | Optional |
+[If and only if both Rust/Cargo activation conditions in §1.6.1 are proven, insert the canonical `Rust/Cargo Foreground Execution Profile` here with exact activation evidence. Otherwise omit the profile entirely.]
 
-### Lint Configuration
-
-**Lint Enabled**: [Yes/No]
-**Lint Command**: `[e.g., npm run lint, eslint ., dotnet format --verify-no-changes]`
-**Lint Blocks Checkpoint**: [Yes/No] - If Yes, lint errors MUST be fixed before phase completion
-
-> **IMPORTANT**: If lint is enabled and blocking, every phase checkpoint MUST run the lint command and fix any errors/warnings before proceeding.
+Record command definitions in FeatureDescription.md `## TestPlan` using the injected
+project-test-plan-authoring/v1 policy. This section links to the check IDs; it does
+not repeat executable placeholders or supply technology defaults. Build and lint
+retain their observed diagnostics as advisory findings. Required tests and review
+follow the independent phase declarations.
 
 ### Missing Project Configuration
 
-[If any commands are missing from project documentation, list them here:]
+For each unresolved check, list its stable ID, inspected configuration references,
+exact missing information and owning repair task. Refinement records UNVERIFIED;
+development resolves the command from current scripts/manifests and executes it
+within authority. Ask the user only for a real architecture/intent/authority gap.
 
-- [ ] **Build Command**: Not documented - user must provide before Phase 0
-- [ ] **Test Command**: Not documented - user must provide before Phase 0
-- [ ] **Lint Command**: Not documented - user must confirm if lint is used
-- [ ] **Success Criteria**: Not documented - using defaults (0 errors, 0 warnings, all tests pass)
-
-**Action Required**: Before starting Phase 0, ensure all build, test, and lint commands are documented in `{MEMORY_BANK_PATH}/CodeGuidelines/` or update this section with the correct commands.
 
 ---
 
@@ -662,25 +737,22 @@ Create `FeatureTasks.md` in the feature folder:
 
 ## Quality Gates
 
-Every phase checkpoint requires (using project-specific commands):
+Populate each phase checkpoint from its explicit flags and configured commands. The following examples apply only when declared:
 
 | Gate | Requirement |
 |------|-------------|
 | **Build** | `[PROJECT_BUILD_COMMAND]` → 0 errors, 0 warnings |
 | **Lint** (if enabled) | `[PROJECT_LINT_COMMAND]` → 0 errors, 0 warnings |
 | **Tests** | `[PROJECT_TEST_COMMAND]` → 100% green |
-| **Code Review** (code phases) | `code-review` MCP → APPROVED or APPROVED_WITH_NOTES |
+| **Code Review** (needCodeReview = true) | `code-review` MCP → APPROVED or APPROVED_WITH_NOTES |
 | **Boy Scout Rule** | No new issues, pre-existing issues fixed |
 | **Time Tracking** | Actual times recorded |
 
-**Proof Required**: Each checkpoint must include actual command output as evidence.
+**Proof Required**: Each required execution check must reference actual command output; reuse valid passing evidence for unchanged inputs. Missing time metadata is not a quality gate.
 
 ### Code Review Requirements
 
-For phases with code implementation, invoke `code-review` MCP command with `feature_id` and `phase_number`.
-
-**Required for**: Phase 3 (ALWAYS), Phase 4 (ALWAYS), Phase 5 (ALWAYS), any phase with significant code.
-**May skip for**: Phase 0, 1, 8 (no code), phases with ONLY DTOs/config/docs.
+When needCodeReview is true, invoke `code-review` with the current feature and phase identity; false requires a recorded scope rationale. Work class informs the refinement decision but never overrides either boolean. All four test-coverage/review flag combinations are valid.
 
 ---
 
@@ -818,15 +890,17 @@ Next Steps:
 3. **Code samples in auxiliary files only** - if truly necessary, put in `Phases/code-samples/phase-N-task-M-sample.md` and reference from the task
 4. **Phase precedence** - prerequisite implementation and verification first; use the default phase sequence only where it respects actual dependencies
 5. **Task dependencies** - record real prerequisite edges within and across phases; never assume tasks in the same phase are independent
-6. **Every implementation task gets a unit test task** - no exceptions
+6. **Every applicable acceptance criterion gets verification** - declare phase tests and EPIC workflow E2E obligations independently
 7. **Boy Scout Rule** - fix pre-existing warnings and failures before proceeding
-8. **Build/test commands must exist** - cannot proceed to Phase 0 without valid commands
+8. **Commands have an owner** - declare each check in the TestPlan; resolve missing executable routes before dependent verification.
 9. **Time estimates required** - both Man/Hour and AI/Hour for every task
 10. **No unresolved in-scope blockers** - classify markers using the shared gate; do not reopen resolved decisions or block on unrelated future enhancements. Future work required by current behavior is a dependency and blocks its consumers.
 11. **Critical-readiness standard** - only proceed when requirements support full implementation planning and complete test planning (acceptance + edge cases)
 12. **Read the whole feature folder** - refinement must consider all relevant files in the feature directory, not only the standard templates
 13. **Verify epic baselines and feature order** - use linked epic plans as inputs, then correct missing cross-epic prerequisites and invalid ordering against actual requirements/code
 14. **Plan for reusable artifacts** - reuse upstream artifacts when available and add contract/regression tests for artifacts downstream features will consume
+15. **Conditional stack profiles only** - generate the Rust/Cargo foreground profile only when both §1.6.1 activation conditions are proven; when active, inherit it into every phase, permit foreground sequential execution, and prohibit background or sibling concurrent Cargo processes
+16. **Implementation and release are separate** - only in-scope tasks and executable target-feature gates block implementation completion; external release dependencies become findings, Lessons Learned, and recommended follow-up EPIC/FEAT work
 
 ---
 
@@ -854,7 +928,7 @@ Include time for: reading code, writing code, manual testing, code review prep (
 | Unable to create Phases folder | Report error and which step failed |
 | Unable to move feature | Report error but note refinement is complete |
 | Incomplete required design documents | Repair before READY or record a material blocker |
-| Build/test commands undocumented | Inspect scripts/CI; resolve required commands before READY |
+| Build/test commands undocumented | Inspect configuration/scripts/CI; record an unresolved TestPlan check and owning repair task; resolve required commands before READY; never execute placeholders |
 
 ---
 
@@ -863,3 +937,13 @@ Include time for: reading code, writing code, manual testing, code review prep (
 - **design-feature** — creates the design docs this command consumes
 - **deep-dive** — clarify phase details or FeatureDescription before refining
 - **start-feature** — next step: validate and begin implementation
+
+
+## TestPlan command handoff
+
+Follow project-test-plan-authoring/v1: write or maintain the canonical `## TestPlan`
+in `FeatureDescription.md` and `## Verification References` in each Phase.
+Refinement discovers commands statically and records UNVERIFIED; developers validate
+and update them from actual execution. Include per-repository cwd, configuration
+evidence, selections, preparation/dependencies, source inputs, generated outputs,
+and report locations. Project type informs discovery, never a default command.

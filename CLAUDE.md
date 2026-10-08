@@ -550,7 +550,7 @@ LLM: Invokes accept-phase with feature_id="FEAT-001", phase_number=3
 
 ### 12. `complete-feature`
 
-**Purpose**: Complete a feature and move it to COMPLETED state.
+**Purpose**: Complete a feature, reconcile linked EPIC documentation, and move it to COMPLETED state.
 
 **When to Use**: After ALL phases are completed.
 
@@ -567,6 +567,7 @@ LLM: Invokes accept-phase with feature_id="FEAT-001", phase_number=3
 - Compiles Lessons Learned from all phases
 - **Asks user** for additional lessons to highlight in interactive mode, or uses auto-detected lessons only in autonomous mode
 - Creates `feature-completion-report.md`
+- If the feature is linked to an EPIC, updates the EPIC status/details and syncs acceptance-test and design/screen tracking when those artifacts exist
 - Moves feature folder from `03_IN_PROGRESS` to `04_COMPLETED`
 - Creates final git commit
 
@@ -751,3 +752,13 @@ Add to `~/.gemini/settings.json` or `.gemini/settings.json`:
   }
 }
 ```
+
+## Acceptance and test workflow
+
+For new features and bug repair, follow
+[EPIC-to-Task acceptance and test traceability](docs/acceptance-test-traceability.md)
+and the [shared responsibility policy](docs/acceptance-responsibility-policy.md).
+Preserve test/criterion/code links at EPIC, FEAT, Phase and Task levels. Required
+tests are executable quality gates; many-to-many coverage does not waive complete
+workflow E2E proof. A bug is reproduced at the appropriate E2E/TwinTest boundary,
+traced to focused coverage and code, then verified through the affected levels.

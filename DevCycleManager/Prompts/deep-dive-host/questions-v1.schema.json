@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:devcycle:deep-dive-host:questions:v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["questions"],
+  "properties": {
+    "questions": {
+      "type": "array", "maxItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["topic", "prompt", "recommendedOptionLabel", "options"],
+        "properties": {
+          "topic": {"type": "string", "minLength": 1},
+          "prompt": {"type": "string", "minLength": 1},
+          "recommendedOptionLabel": {"type": "string", "minLength": 1},
+          "options": {
+            "type": "array", "minItems": 3, "maxItems": 4,
+            "items": {
+              "type": "object", "additionalProperties": false,
+              "required": ["label", "description"],
+              "properties": {
+                "label": {"type": "string", "minLength": 1},
+                "description": {"type": "string", "minLength": 1}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

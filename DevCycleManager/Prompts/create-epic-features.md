@@ -1,5 +1,10 @@
 # Create Epic Features
 
+Apply the shared Acceptance Responsibility Policy when creating criteria or tests.
+Preserve EPIC -> FEAT -> Phase -> Task ownership and many-to-many evidence links.
+Persist the acceptance responsibility table in EPIC and FEAT documents, and the
+relevant parent criterion/test mappings in phase and task acceptance sections.
+
 <!--
 name: create-epic-features
 purpose: Batch-create all TBD features from an epic's Features Breakdown table

@@ -51,3 +51,13 @@ The MCP server will provide commands to move features through the development wo
 The integration with the host's LLM is a key aspect of this project. The chosen approach is the **MCP Sampling Protocol**, where the client application (e.g., the Gemini CLI) is responsible for all communication with the LLM. The MCP server will request LLM actions via `ctx.session.sample()`, but it will not have direct access to the LLM or require its own `GEMINI_API_KEY`.
 
 This pattern is secure, flexible, and preserves the rich context of the calling environment. For a detailed explanation, see the [Sampling Protocol](./MemoryBank/Overview/Sampling_Protocol.md) document.
+
+## Acceptance and test workflow
+
+For new features and bug repair, follow
+[EPIC-to-Task acceptance and test traceability](docs/acceptance-test-traceability.md)
+and the [shared responsibility policy](docs/acceptance-responsibility-policy.md).
+Preserve test/criterion/code links at EPIC, FEAT, Phase and Task levels. Required
+tests are executable quality gates; many-to-many coverage does not waive complete
+workflow E2E proof. A bug is reproduced at the appropriate E2E/TwinTest boundary,
+traced to focused coverage and code, then verified through the affected levels.

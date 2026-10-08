@@ -1,4 +1,5 @@
 import json
+import shutil
 import sys
 import tempfile
 import unittest
@@ -40,15 +41,22 @@ class FeatureReadinessTests(unittest.IsolatedAsyncioTestCase):
     async def test_gate_changes_reach_both_tools_without_server_restart(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            (root / "dependency-order.md").write_text("DEPENDENCY_POLICY")
-            for name in ("refine-feature.md", "start-feature.md"):
-                (root / name).write_text((main.PROMPTS_DIR / name).read_text())
+            shutil.copytree(main.PROMPTS_DIR, root, dirs_exist_ok=True)
             with patch.object(main, "PROMPTS_DIR", root):
                 for revision in ("GATE_FIRST_REVISION", "GATE_SECOND_REVISION"):
                     (root / "feature-readiness.md").write_text(revision)
                     for tool in ("refine-feature", "start-feature"):
                         response = await self.call(tool)
-                        self.assertTrue(response.result["structuredContent"]["instructions"].endswith(revision))
+                        self.assertIsNone(response.error)
+                        self.assertFalse(response.result["isError"])
+                        payload = response.result["structuredContent"]
+                        self.assertEqual(payload, json.loads(response.result["content"][0]["text"]))
+                        text = payload["instructions"]
+                        self.assertEqual(1, text.count(revision))
+                        if revision == "GATE_SECOND_REVISION":
+                            self.assertNotIn("GATE_FIRST_REVISION", text)
+                        self.assertEqual("devcycle-phase-quality/v2", payload["quality_gate_policy_version"])
+                        self.assertEqual("acceptance-responsibility/v1", payload["acceptance_policy_version"])
 
     async def test_missing_shared_gate_cannot_silently_bypass_validation(self):
         with tempfile.TemporaryDirectory() as temp:
