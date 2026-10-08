@@ -43,7 +43,7 @@ This procedure is DONE when:
 - [ ] Git branch created: `feat/{{feature_id}}-{slug}`
 - [ ] Feature folder moved to `03_IN_PROGRESS/`
 - [ ] FeatureDescription.md updated with state change
-- [ ] Parent epic updated (if linked)
+- [ ] Parent epic updated and all current status views reconciled (if linked)
 - [ ] Startup changes finalized after the report; authorized commits recorded where applicable and clean code handoff verified
 - [ ] Success report saved as `start-feature-report-{timestamp}.md`
 - [ ] Handoff to `continue-implementation` initiated with the selected workflow mode (`autonomous` or `single_phase`)
@@ -63,6 +63,11 @@ entry check and before setup writes, so setup cannot dirty the base checkout.
 Phase 4 confirms this selection; it must not carry setup edits between checkouts.
 
 ## Phase 0: Resolve Memory Bank Path
+
+First honor an explicit MemoryBank path already supplied by the user or project
+instructions (including AGENTS.md). Reuse established session decisions; do not
+ask again because CLAUDE.md is absent. Use the following discovery only if no
+path is established. Keep an external MemoryBank outside the source repository.
 
 1. Read `CLAUDE.md` in the project root.
 2. Find the `## DevCycle Settings` section and extract `Memory Bank: <path>`.
@@ -97,78 +102,27 @@ Phase 4 confirms this selection; it must not carry setup edits between checkouts
 
 ## Phase 2: Pre-Validation (STRICT — Rejects on Failure)
 
-**Mindset: If uncertain, REJECT.**
+Execute the included **Shared Feature Readiness Gate**, R1–R6. It is the same
+standard refinement must pass before declaring READY.
 
-### 2.1 Documentation Consistency
+Read `readiness-validation.md` if present and verify it against current inputs.
+Generate missing evidence for older features. Repair routine technical or
+formatting omissions under existing authority and rerun the gate; ordinary
+engineering judgment is not a rejection reason. For inline implementation code,
+move samples to auxiliary files where needed. Words such as "import", "from",
+"interface", or "string" in prose are not code violations. Contract schemas,
+exact filenames, field names, and validation rules belong in the plan.
 
-Read ALL documents and cross-check:
+**PASS** → save `pre-validation-report-APPROVED-{timestamp}.md`, referencing
+current shared-gate evidence, then proceed to Phase 3.
 
-| Check | What to Verify |
-|-------|----------------|
-| Feature ID Match | Consistent across all documents |
-| Title/Name Match | Consistent across all documents |
-| Scope Alignment | FeatureDescription scope matches FeatureTasks scope |
-| Phase Coverage | All requirements have corresponding tasks |
-
-Any mismatch → REJECT.
-
-### 2.2 Completeness Check
-
-Verify based on feature type:
-
-| Feature Type | Required Documentation |
-|--------------|----------------------|
-| Full-Stack (UI + Backend) | UI design docs, screens/views, user interactions, form validations, API contracts, data models |
-| Backend-Only | API contracts, data models, integration points |
-| Frontend-Only | UI design docs, screens/views, user interactions, referenced backend APIs |
-
-Missing documentation → REJECT.
-
-### 2.3 Ambiguity Detection (CRITICAL)
-
-Read every task in every phase file. Ask: "Can I implement this without guessing?"
-
-Reject any task containing vague language such as:
-- "Handle errors appropriately" → HOW? What errors? What messages?
-- "Add validation" → WHAT validation rules?
-- "Display data" → WHAT data? In what format?
-- "Similar to existing feature" → WHICH feature? WHAT aspects?
-- "Support multiple formats" → WHICH formats specifically?
-
-**If ANY task requires creativity or interpretation to implement → REJECT.**
-
-### 2.4 Technology-Agnostic Check (CRITICAL)
-
-Scan ALL phase files for inline code that violates documentation standards.
-
-**Patterns that trigger REJECT:**
-
-| Category | Examples |
-|----------|----------|
-| Language code blocks | ` ```csharp `, ` ```javascript `, ` ```python `, ` ```java `, ` ```typescript ` |
-| Class/interface keywords | `class`, `interface`, `struct`, `enum` |
-| Method signatures | `public`, `private`, `void`, `async`, `function`, `def`, `func` |
-| Typed declarations | `int`, `string`, `bool`, `var`, `let`, `const` |
-| Import statements | `import`, `using`, `require`, `from` |
-| Framework syntax | `@Injectable`, `[Attribute]`, decorators |
-
-**Allowed formats:** Gherkin (Given/When/Then), Mermaid flowcharts, plain text descriptions, JSON schemas, references to `code-samples/` auxiliary files.
-
-**If code is found inline:**
-- Option 1: REJECT with specific file and line locations
-- Option 2: AUTO-FIX by moving code to `Phases/code-samples/` and replacing with reference
-
-### 2.5 Build/Test Configuration
-
-Verify `FeatureTasks.md` has **Project Build & Test Configuration** filled in (no `[PROJECT_BUILD_COMMAND]` placeholders).
-
-Missing → REJECT: "Project build/test commands must be configured before starting implementation."
-
-### 2.6 Pre-Validation Result
-
-**If ALL checks pass** → Log APPROVED, proceed to Phase 3.
-
-**If ANY check fails** → Generate rejection report listing all issues (consistency, missing info, ambiguous tasks, inline code, missing config) with specific fix instructions. Save to `02_READY_TO_DEVELOP/{folder}/pre-validation-report-REJECTED-{timestamp}.md`. Recommend re-running `refine-feature`. **STOP.**
+**Remaining material BLOCKED** → save
+`pre-validation-report-REJECTED-{timestamp}.md` with specific evidence, the
+missing capability/evidence/decision and the provider action needed. A required
+unimplemented dependency is a blocker even when no user decision is missing. Explain
+whether this is changed input or a missed refinement check. Preserve historical
+reports, synchronize current readiness tracking, and STOP. Do not reflexively
+ask the user to repeat deep-dive or refinement for already answered questions.
 
 ---
 
@@ -265,6 +219,29 @@ Check `Parent Epic` field in `FeatureDescription.md`. If linked (not "N/A"):
 
 If no parent epic → skip.
 
+Only a successful start changes the target feature to IN_PROGRESS and records
+its actual start date. Validate the feature description, lifecycle location and
+start evidence together; do not infer a successful start from the tool call.
+On rejected validation or a failed move, record the actual state/blocker and
+reconcile any affected epic entry without falsely marking implementation started.
+
+Read every linked feature's current description, lifecycle location and relevant
+validation/delivery evidence before recalculating counts from distinct IDs.
+Keep completed siblings completed; do not reset other features because this one
+started. The epic is IN_PROGRESS after a successful feature start; completion
+requires all required features and epic acceptance/delivery gates, not merely
+one closed feature or PR.
+
+Read back the entire epic: header, Features Breakdown, Progress Tracking,
+counts/percentage, diagram, delivery summary and next steps must agree. Update
+existing rows and moved links instead of appending competing status snapshots.
+Archive obsolete lifecycle tables/progress prose to linked history with original
+dates/evidence preserved; a historical heading alone does not resolve conflicting
+statuses in the current epic. Preserve all PR references and design decisions.
+Report unresolved evidence conflicts instead of claiming consistency. Include
+the readback result in the start report; repeat runs must not duplicate entries,
+change original start dates or advance unrelated features.
+
 ---
 
 ## Phase 7: Prepare Startup Finalization
@@ -326,9 +303,9 @@ After initialization, execute the same shared Client execution loop as continue-
 
 ## Rules
 
-- Pre-validation is STRICT — reject on any ambiguity, inconsistency, or missing info
+- Pre-validation uses the shared R1–R6 gate; resolve routine omissions and stop for remaining material blockers
 - Post-validation is HELPFUL — auto-fix formatting issues, add missing templates
-- Phase files must be technology-agnostic (Gherkin/Mermaid/plain text only)
+- Phase files describe behavior using Gherkin/Mermaid/prose/schemas; exact contract details are allowed
 - Save rejection report and STOP immediately on pre-validation failure
 - Never proceed to post-validation if pre-validation failed
 - Branch naming: `feat/{FEAT-XXX}-{slug}`
@@ -342,7 +319,7 @@ After initialization, execute the same shared Client execution loop as continue-
 | Scenario | Action |
 |----------|--------|
 | Feature not found in 02_READY_TO_DEVELOP | Report error, stop |
-| Pre-validation fails | Save rejection report, recommend `refine-feature`, stop |
+| Material pre-validation blocker remains after repair | Save evidence, synchronize readiness, explain the unresolved decision, stop |
 | Git branch creation fails | Continue without branch, note in report |
 | Git commit/push fails | Continue without commit, note in report |
 | Folder move fails | Report error, stop — feature state is uncertain |

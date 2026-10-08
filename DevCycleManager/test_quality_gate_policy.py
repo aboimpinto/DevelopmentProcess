@@ -1,4 +1,5 @@
 import json
+import shutil
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -151,13 +152,16 @@ class SharedQualityGateRecipeTests(unittest.IsolatedAsyncioTestCase):
     async def test_missing_shared_policy_fails_closed_instead_of_serving_old_review(self):
         with TemporaryDirectory() as folder:
             from main import PROMPTS_DIR
-            Path(folder, "code-review.md").write_text((PROMPTS_DIR / "code-review.md").read_text())
+            # Isolate the missing quality policy, not the dependency loader.
+            shutil.copytree(PROMPTS_DIR, folder, dirs_exist_ok=True)
+            Path(folder, "phase-quality-policy.md").unlink()
             with patch("main.PROMPTS_DIR", Path(folder)):
                 response = await json_rpc_handler(JsonRpcRequest(
                     jsonrpc="2.0", id=2, method="tools/call",
                     params={"name": "code-review", "arguments": {"feature_id": "FEAT-901", "phase_number": 11}},
                 ))
                 self.assertIsNotNone(response.error)
+                self.assertIn("phase-quality-policy.md", str(response.error))
                 self.assertIsNone(response.result)
 
     async def test_test_only_exception_preserves_explicit_production_measurement_assignment(self):

@@ -89,6 +89,15 @@ class DeepDiveRequest:
         )
 
 
+def load_procedure(name: str) -> str:
+    """Include mandatory dependency ordering in every lifecycle recipe."""
+    procedure = (PROMPTS_DIR / name).read_text(encoding="utf-8")
+    dependencies = (PROMPTS_DIR / "dependency-order.md").read_text(encoding="utf-8")
+    if not dependencies.strip():
+        raise ValueError("Required dependency-order.md policy is empty")
+    return procedure + "\n\n---\n\n" + dependencies
+
+
 # --- Mocking the MCP Context/Sampling for the Prototype ---
 async def mock_sample_llm(prompt: str, context: Optional[str] = None) -> str:
     """
@@ -142,12 +151,11 @@ async def run_submit_epic(description: str, title: Optional[str] = None, externa
     """
     # Load the procedure template
     try:
-        with open(PROMPTS_DIR / "submit-epic.md", "r", encoding="utf-8") as f:
-            procedure_template = f.read()
-    except FileNotFoundError:
+        procedure_template = load_procedure("submit-epic.md")
+    except (FileNotFoundError, ValueError) as exc:
         return {
             "status": "error",
-            "message": "submit-epic.md prompt template not found in Prompts directory."
+            "message": f"Cannot load required procedure policy: {exc}"
         }
 
     # Replace placeholders with actual values
@@ -180,12 +188,11 @@ async def run_submit_feature(description: str, title: Optional[str] = None, exte
     """
     # Load the procedure template
     try:
-        with open(PROMPTS_DIR / "submit-feature.md", "r", encoding="utf-8") as f:
-            procedure_template = f.read()
-    except FileNotFoundError:
+        procedure_template = load_procedure("submit-feature.md")
+    except (FileNotFoundError, ValueError) as exc:
         return {
             "status": "error",
-            "message": "submit-feature.md prompt template not found in Prompts directory."
+            "message": f"Cannot load required procedure policy: {exc}"
         }
 
     # Replace placeholders with actual values
@@ -220,12 +227,11 @@ async def run_create_epic_features(epic_id: str, epic_path: Optional[str] = None
     """
     # Load the procedure template
     try:
-        with open(PROMPTS_DIR / "create-epic-features.md", "r", encoding="utf-8") as f:
-            procedure_template = f.read()
-    except FileNotFoundError:
+        procedure_template = load_procedure("create-epic-features.md")
+    except (FileNotFoundError, ValueError) as exc:
         return {
             "status": "error",
-            "message": "create-epic-features.md prompt template not found in Prompts directory."
+            "message": f"Cannot load required procedure policy: {exc}"
         }
 
     # Replace placeholders with actual values
@@ -257,12 +263,11 @@ async def run_link_feature_to_epic(feature_id: str, epic_id: str, feature_path: 
     """
     # Load the procedure template
     try:
-        with open(PROMPTS_DIR / "link-feature-to-epic.md", "r", encoding="utf-8") as f:
-            procedure_template = f.read()
-    except FileNotFoundError:
+        procedure_template = load_procedure("link-feature-to-epic.md")
+    except (FileNotFoundError, ValueError) as exc:
         return {
             "status": "error",
-            "message": "link-feature-to-epic.md prompt template not found in Prompts directory."
+            "message": f"Cannot load required procedure policy: {exc}"
         }
 
     # Replace placeholders with actual values
@@ -299,12 +304,11 @@ async def run_design_feature(feature_id: str, feature_path: Optional[str] = None
     """
     # Load the procedure template
     try:
-        with open(PROMPTS_DIR / "design-feature.md", "r", encoding="utf-8") as f:
-            procedure_template = f.read()
-    except FileNotFoundError:
+        procedure_template = load_procedure("design-feature.md")
+    except (FileNotFoundError, ValueError) as exc:
         return {
             "status": "error",
-            "message": "design-feature.md prompt template not found in Prompts directory."
+            "message": f"Cannot load required procedure policy: {exc}"
         }
 
     # Replace placeholders with actual values
@@ -345,12 +349,13 @@ async def run_refine_feature(feature_id: str, feature_path: Optional[str] = None
     """
     # Load the procedure template
     try:
-        with open(PROMPTS_DIR / "refine-feature.md", "r", encoding="utf-8") as f:
-            procedure_template = f.read()
-    except FileNotFoundError:
+        procedure_template = load_procedure("refine-feature.md")
+        readiness = (PROMPTS_DIR / "feature-readiness.md").read_text(encoding="utf-8")
+        procedure_template += "\n\n---\n\n" + readiness
+    except (FileNotFoundError, ValueError) as exc:
         return {
             "status": "error",
-            "message": "refine-feature.md prompt template not found in Prompts directory."
+            "message": f"Cannot load required procedure policy: {exc}"
         }
 
     # Replace placeholders with actual values
@@ -378,6 +383,8 @@ async def run_refine_feature(feature_id: str, feature_path: Optional[str] = None
         "outputs": [
             "FeatureDescription.md",
             "FeatureTasks.md",
+            "readiness-validation.md",
+            "ImplementationContract.md (when applicable)",
             "Phases/phase-0-health-check.md",
             "Phases/phase-1-planning-analysis.md",
             "Phases/phase-2-data-layer.md",
@@ -388,7 +395,7 @@ async def run_refine_feature(feature_id: str, feature_path: Optional[str] = None
             "Phases/phase-7-testing-polish.md",
             "Phases/phase-8-final-checkpoint.md"
         ],
-        "message": "Execute the refine-feature procedure. Read the full feature folder plus any linked epic/dependency context, then create a phased implementation plan with tasks, unit tests, and quality checkpoints. The feature will be moved to 02_READY_TO_DEVELOP when complete."
+        "message": "Execute the refine-feature procedure. Read the full feature folder plus any linked epic/dependency context, then create a phased implementation plan with tasks, unit tests, and quality checkpoints. Execute the included shared readiness gate and save readiness-validation.md before declaring READY or moving to 02_READY_TO_DEVELOP."
     }
 
 async def run_start_feature(feature_id: str, feature_path: Optional[str] = None, workflow_mode: Optional[str] = None) -> dict:
@@ -404,12 +411,13 @@ async def run_start_feature(feature_id: str, feature_path: Optional[str] = None,
     """
     # Load the procedure template
     try:
-        with open(PROMPTS_DIR / "start-feature.md", "r", encoding="utf-8") as f:
-            procedure_template = f.read()
-    except FileNotFoundError:
+        procedure_template = load_procedure("start-feature.md")
+        readiness = (PROMPTS_DIR / "feature-readiness.md").read_text(encoding="utf-8")
+        procedure_template += "\n\n---\n\n" + readiness
+    except (FileNotFoundError, ValueError) as exc:
         return {
             "status": "error",
-            "message": "start-feature.md prompt template not found in Prompts directory."
+            "message": f"Cannot load required procedure policy: {exc}"
         }
 
     # Replace placeholders with actual values
@@ -455,12 +463,11 @@ async def run_continue_implementation(feature_id: str, feature_path: Optional[st
     """
     # Load the procedure template
     try:
-        with open(PROMPTS_DIR / "continue-implementation.md", "r", encoding="utf-8") as f:
-            procedure_template = f.read()
-    except FileNotFoundError:
+        procedure_template = load_procedure("continue-implementation.md")
+    except (FileNotFoundError, ValueError) as exc:
         return {
             "status": "error",
-            "message": "continue-implementation.md prompt template not found in Prompts directory."
+            "message": f"Cannot load required procedure policy: {exc}"
         }
 
     # Replace placeholders with actual values
@@ -516,12 +523,11 @@ async def run_accept_phase(feature_id: str, phase_number: int, feature_path: Opt
     """
     # Load the procedure template
     try:
-        with open(PROMPTS_DIR / "accept-phase.md", "r", encoding="utf-8") as f:
-            procedure_template = f.read()
-    except FileNotFoundError:
+        procedure_template = load_procedure("accept-phase.md")
+    except (FileNotFoundError, ValueError) as exc:
         return {
             "status": "error",
-            "message": "accept-phase.md prompt template not found in Prompts directory."
+            "message": f"Cannot load required procedure policy: {exc}"
         }
 
     # Replace placeholders with actual values
@@ -570,12 +576,11 @@ async def run_code_review(feature_id: str, phase_number: int, feature_path: Opti
     """
     # Load the procedure template
     try:
-        with open(PROMPTS_DIR / "code-review.md", "r", encoding="utf-8") as f:
-            procedure_template = f.read()
-    except FileNotFoundError:
+        procedure_template = load_procedure("code-review.md")
+    except (FileNotFoundError, ValueError) as exc:
         return {
             "status": "error",
-            "message": "code-review.md prompt template not found in Prompts directory."
+            "message": f"Cannot load required procedure policy: {exc}"
         }
 
     # Replace placeholders with actual values
@@ -613,20 +618,19 @@ async def run_complete_feature(feature_id: str, feature_path: Optional[str] = No
     3. Verifies build and tests pass (0 errors, 0 warnings, 100% tests)
     4. Compiles Lessons Learned from all phases into feature-level document
     5. Asks user for additional lessons they want to highlight (or skips the prompt in autonomous workflow mode)
-    6. Updates feature documentation with completion status
-    7. Synchronizes linked epic documentation, acceptance tests, and design/screen tracking when present
+    6. Updates feature and parent epic with completion status and available PR/merge evidence
+    7. Synchronizes linked epic acceptance tests and design/screen tracking when present
     8. Creates completion reports (validation, metrics, lessons learned)
     9. Moves feature to 04_COMPLETED folder
     10. Creates completion git commit and pushes
     """
     # Load the procedure template
     try:
-        with open(PROMPTS_DIR / "complete-feature.md", "r", encoding="utf-8") as f:
-            procedure_template = f.read()
-    except FileNotFoundError:
+        procedure_template = load_procedure("complete-feature.md")
+    except (FileNotFoundError, ValueError) as exc:
         return {
             "status": "error",
-            "message": "complete-feature.md prompt template not found in Prompts directory."
+            "message": f"Cannot load required procedure policy: {exc}"
         }
 
     # Replace placeholders with actual values
@@ -640,8 +644,8 @@ async def run_complete_feature(feature_id: str, feature_path: Optional[str] = No
         "procedure_name": "complete-feature",
         "instructions": procedure,
         "context_folders": [
-            "{memory_bank}/Features/03_IN_PROGRESS/",
             "{memory_bank}/Features/00_EPICS/",
+            "{memory_bank}/Features/03_IN_PROGRESS/",
             "{memory_bank}/LessonsLearned/"
         ],
         "context_files": [
@@ -651,7 +655,8 @@ async def run_complete_feature(feature_id: str, feature_path: Optional[str] = No
             "feature-completion-report.md",
             "{memory_bank}/LessonsLearned/{feature_id}/Feature-Completion-LessonsLearned.md",
             "FeatureTasks.md updated with completion status",
-            "Linked epic documentation updated when Parent Epic exists",
+            "FeatureDescription.md updated with every associated PR and available merge evidence",
+            "Linked EpicDescription.md updated with completion and delivery references (if applicable)",
             "Feature folder moved to 04_COMPLETED/",
             "Git commit with completion details"
         ],
@@ -678,12 +683,11 @@ async def run_deep_dive(
     )
 
     try:
-        with open(PROMPTS_DIR / "deep-dive.md", "r", encoding="utf-8") as f:
-            procedure_template = f.read()
-    except FileNotFoundError:
+        procedure_template = load_procedure("deep-dive.md")
+    except (FileNotFoundError, ValueError) as exc:
         return {
             "status": "error",
-            "message": "deep-dive.md prompt template not found in Prompts directory."
+            "message": f"Cannot load required procedure policy: {exc}"
         }
 
     focus_text = (

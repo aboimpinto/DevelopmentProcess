@@ -72,6 +72,7 @@ This procedure is DONE when:
 - [ ] Adaptive interview: only the target file updated, with existing content preserved
 - [ ] Question manifest: every currently identifiable question and option returned together, with no file mutation
 - [ ] Structured completion summary or question manifest presented
+- [ ] Target epic reconciled with feature states and current decisions; linked epic discrepancies reported without modifying linked files
 
 ---
 
@@ -347,6 +348,10 @@ If no, proceed.
 ### 5.2 Update the Target Spec File
 
 Only update `{{file_path}}`. Preserve all existing content that is not explicitly superseded.
+Update relevant existing sections with confirmed decisions; add sections only for
+new topics. Preserve evidence and decision history. Consolidate superseded status
+snapshots into a clearly linked history section within the target document; do not
+create or modify a separate history file under this single-target authority.
 
 **Formatting rules:**
 - In comprehensive mode, add specific sections based on what was discussed.
@@ -357,7 +362,35 @@ Only update `{{file_path}}`. Preserve all existing content that is not explicitl
 - Include or update "Related Documents" only in the target file.
 - Use `##` for major sections and `###` for subsections.
 
-### 5.3 Present Structured Summary
+### 5.3 Reconcile the Target Epic or Report Linked Epic Discrepancies
+
+These reconciliation writes apply only in adaptive mode when the target itself
+is an epic. In question_manifest mode, return questions without any mutation.
+For a feature, phase or other target, read its linked epic as context and report
+needed reconciliation for a separately authorized lifecycle action; never update
+that linked file. If none exists, record N/A; do not create an epic.
+
+Update the epic's scope, decisions, dependencies and applicable feature entries
+from the confirmed interview. Read the linked feature descriptions, lifecycle
+locations and relevant validation/delivery evidence. Reconcile the epic header,
+Features Breakdown, Progress Tracking, distinct-feature counts/percentage,
+diagram, delivery summary and next steps against that evidence. Preserve all PR
+references and completed siblings; report unresolved evidence conflicts rather
+than asserting consistency. Mark interview completion separately from feature
+or epic delivery. A completed deep-dive does not itself make a feature READY,
+IN_PROGRESS or COMPLETED, execute acceptance, or authorize new implementation.
+
+Keep a single consistent current view. Move obsolete lifecycle snapshots and
+superseded progress prose into the target's linked history section with their
+original dates/evidence; do not retain competing current status views or write
+another file.
+Read back the whole epic before reporting success, and include the consistency
+result in the summary. On an interrupted interview, save confirmed decisions
+and its incomplete status, reconcile affected records without advancing the
+lifecycle, and identify any unresolved scope/status conflict. Repeat runs update
+existing records without duplicate snapshots or invented dates/results.
+
+### 5.4 Present Structured Summary
 
 Finish with this machine-readable result, followed by a concise human summary:
 
@@ -379,6 +412,9 @@ Allowed statuses are `completed`, `already_resolved`, `incomplete`, `blocked`, a
 For `already_resolved`, include the authoritative target-file section references in `decisions_added` and use an empty `files_modified` list when no write was necessary.
 
 The `files_modified` list must be empty or contain only `{{file_path}}`.
+Include an Epic Consistency summary: target epic readback result, or linked epic
+discrepancies and the required follow-up owner/action, or N/A. Interview completion
+never certifies feature or epic delivery.
 
 ---
 

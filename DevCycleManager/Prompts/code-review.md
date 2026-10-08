@@ -89,6 +89,9 @@ boundary. Existing unresolved findings are not a reason to skip review.
 Test-only assertion assessment belongs to test verification, not a production-code
 review loop. Reconcile stale test-only review declarations through the shared scope
 policy before dispatch; preserve real production findings with their production owner.
+Required Dependency Order checks still apply to planning and any skipped code
+review. Runtime-affecting configuration must retain its required review scope;
+reconcile the explicit declaration rather than skipping it as config-only.
 
 If skipping, report:
 ```markdown
@@ -111,6 +114,9 @@ Read and internalize:
 3. For each commit: `git show --name-only --pretty="" <hash>` to get changed files
 4. Compile unique file list
 5. Note any Gherkin behavior specs from the phase tasks
+6. Apply Required Dependency Order: inspect prerequisite evidence and required
+   files absent from the diff (startup, configuration, migrations, docs/catalog).
+   Do not approve consumer work with unverified prerequisites.
 
 ---
 
