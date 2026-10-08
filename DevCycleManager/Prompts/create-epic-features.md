@@ -124,7 +124,9 @@ Options:
 
 1. Identify features with no dependencies (create first)
 2. Features depending on other TBD features wait until the dependency is created
-3. Dependencies on existing `FEAT-XXX` features are already satisfied
+3. Existing `FEAT-XXX` IDs resolve references only. Verify implementation availability
+   separately under Required Dependency Order; an existing record never satisfies
+   a runtime or implementation prerequisite.
 
 ### 4.2 Create Each Feature
 
@@ -203,7 +205,7 @@ Next Steps:
 |----------|--------|
 | Epic not found | Report error and STOP |
 | No TBD features | Report "All features already created" and STOP |
-| Circular dependency detected | Report the cycle, ask user to fix in EpicDescription.md |
+| Circular dependency detected | Record the cycle; split/reorder under existing authority and update the epic. Block dependent execution until resolved; ask only for a remaining scope decision. |
 | `submit-feature` fails | Report error, list which features were created, STOP |
 | User cancels mid-batch | Report which features were created before cancellation |
 

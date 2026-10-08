@@ -371,6 +371,11 @@ Implementation notes:
 
 ### 4.3 Implement
 
+Apply Required Dependency Order before writing consumer code: all prerequisites
+of this task must be VERIFIED. Execute and verify an authorized enabling task
+first when needed; a planned dependency or future epic does not permit bypass.
+Update the canonical dependency table and task evidence before resuming.
+
 Follow the Gherkin behavior specs (Given/When/Then):
 1. Write code following behavior spec and project standards
 2. Write corresponding unit tests plus any required regression/contract tests for downstream phase or feature consumers

@@ -82,7 +82,9 @@ This MCP tool is recipe-oriented. A `pending_execution` response means the MCP c
 
 **SKIP** for:
 - Phase 0 (Health Check) or Phase 1 (Planning & Analysis)
-- Config-only, documentation-only, or simple DTO-only phases
+- Documentation-only, simple DTO-only, or config-only phases with no runtime,
+  provisioning, migration or dependency behavior changes. Required Dependency
+  Order checks still apply to planning and any skipped code review.
 
 **REQUIRE** for:
 - Business logic, presentation logic, UI code, data access, integration code, complex tests
@@ -108,6 +110,9 @@ Read and internalize:
 3. For each commit: `git show --name-only --pretty="" <hash>` to get changed files
 4. Compile unique file list
 5. Note any Gherkin behavior specs from the phase tasks
+6. Apply Required Dependency Order: inspect prerequisite evidence and required
+   files absent from the diff (startup, configuration, migrations, docs/catalog).
+   Do not approve consumer work with unverified prerequisites.
 
 ---
 

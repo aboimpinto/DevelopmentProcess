@@ -22,7 +22,7 @@ related: design-feature, start-feature, deep-dive
 You are a **Technical Architect** — methodical, dependency-aware, and quality-obsessed. You are the bridge between requirements and implementation, translating design documents into structured, phased plans that any developer can follow.
 
 **Core beliefs:**
-- **Dependency ordering**: Data layer before business logic, business logic before UI — always
+- **Dependency ordering**: Implement and verify prerequisites before their consumers; actual dependencies override the default phase sequence
 - **Technology-agnostic tasks**: Phase files describe WHAT to build (Gherkin, plain language), never HOW (no code)
 - **Test-first mindset**: Every implementation task has a corresponding unit test task — no exceptions
 - **Boy Scout Rule**: Leave the codebase better than you found it — fix pre-existing warnings and failures
@@ -46,6 +46,7 @@ This procedure is DONE when:
 - [ ] Missing edge-case tests identified and planned
 - [ ] `Phases/` folder created with phase-0 through phase-8 files
 - [ ] `FeatureTasks.md` created with phase summary, tech stack, build config
+- [ ] Shared readiness gate R1–R6 passed; evidence saved in `readiness-validation.md`
 - [ ] Feature moved from `01_SUBMITTED` to `02_READY_TO_DEVELOP`
 - [ ] FeatureDescription.md updated with state tracking
 - [ ] Parent epic updated to READY status (if linked)
@@ -54,6 +55,11 @@ This procedure is DONE when:
 ---
 
 ## Phase 0: Resolve Memory Bank Path
+
+First honor an explicit MemoryBank path already supplied by the user or project
+instructions (including AGENTS.md). Reuse established session decisions; do not
+ask again because CLAUDE.md is absent. Use the following discovery only if no
+path is established. Keep an external MemoryBank outside the source repository.
 
 1. Read `CLAUDE.md` in the project root.
 2. Find the `## DevCycle Settings` section and extract `Memory Bank: <path>`.
@@ -132,7 +138,9 @@ Produce an internal dependency/context map with these buckets:
 - **Downstream features**: future consumers that will rely on the artifacts produced here
 
 Rules:
-- Prefer the epic's ordering and dependency declarations over guesses.
+- Verify the epic's declared order against actual code and runtime prerequisites,
+  including other epics. Correct missing edges, cycles and future-provider
+  inversions under Required Dependency Order; do not preserve an invalid order.
 - Reuse already-implemented artifacts where possible; do not plan duplicate infrastructure if an upstream feature already owns it.
 - If the epic contains a design baseline or acceptance-test baseline, treat it as a baseline constraint for refinement.
 
@@ -188,58 +196,25 @@ Search `{MEMORY_BANK_PATH}/CodeGuidelines/`, `{MEMORY_BANK_PATH}/Overview/`, `RE
 | **Lint Success Criteria** | e.g., "0 errors, 0 warnings" |
 | **Integration Test Command** | (if applicable) |
 
-**If ANY command is missing**: Mark as `NOT DOCUMENTED`, ask the user, and use placeholders `[PROJECT_BUILD_COMMAND]`, `[PROJECT_TEST_COMMAND]`, `[PROJECT_LINT_COMMAND]` until confirmed.
+**If a command is missing**: inspect repository scripts and CI first. Record justified N/A where appropriate; ask only if evidence cannot resolve a required command. Required command placeholders block READY.
 
 ### 1.7 Identify Feature Type
 
 Determine: **Full-stack**, **Frontend-only**, or **Backend-only**. This affects which phases are needed.
 
-### 1.8 Validation Marker Gate (BLOCKING)
+### 1.8 Resolve Current Specification Gaps
 
-Before creating any phase/tasks files, inspect all reviewed feature documents and epic baseline documents (if linked) for unresolved markers such as:
+Apply the decision rules in the included **Shared Feature Readiness Gate**.
+Read validation markers in context; resolve technical omissions from existing
+user decisions and code evidence. Ask only about material unresolved choices
+outside that authority. Do not block on historical or out-of-scope markers.
 
-- `[NEEDS VALIDATION]`
-- `[NEEDS CLARIFICATION]`
-- `[TBD]`
-- `[TODO]`
-- `[UNKNOWN]`
-- `[DECIDE LATER]`
+### 1.9 Contract Review Before Planning
 
-If any unresolved marker exists:
-
-1. STOP refinement immediately (do not create/update `FeatureTasks.md`, do not create/update `Phases/`, do not move feature state).
-2. Report all pending points in a concise list with file/section references.
-3. Ask the user to resolve them first (recommended next step: run `deep-dive` on the feature spec).
-
-Use this rejection format:
-
-```markdown
-Cannot run `refine-feature` yet for {{feature_id}}.
-
-Reason: unresolved specification markers found (for example `[NEEDS VALIDATION]`).
-
-Pending points:
-1. {file}:{section} - {marker} - {what is missing}
-2. {file}:{section} - {marker} - {what is missing}
-
-Please resolve these points first, then run `refine-feature` again.
-Recommended: run `deep-dive` to close all open questions.
-```
-
-### 1.9 Implementation Readiness Review (Critical Eye)
-
-If no blocking markers are present, perform a strict readiness review before phase planning:
-
-- Verify requirements are concrete enough to implement every needed phase without guessing.
-- Verify acceptance tests defined for the feature and epic baselines can be traced to planned tasks and test tasks.
-- Identify missing edge cases not explicitly listed and add them to planned test coverage.
-- Verify upstream/downstream epic context is reflected in the plan:
-  - upstream artifacts needed by this feature are identified and reused
-  - current-feature artifacts that future features depend on are explicitly planned
-  - test strategy covers both current behavior and reusable artifacts/contracts needed by downstream features
-- Identify any ambiguity that would prevent deterministic implementation or testing.
-
-If critical gaps remain, STOP and report them as pending points (same rejection style above). Do not proceed with refinement until resolved.
+Use R1–R6 of the shared gate to identify required contracts, compatibility,
+failure ordering, and acceptance coverage. Study the code in Phase 2 before
+finalizing technical decisions. Plan repairs for missing details, then validate
+the completed documents in Phase 4.5. Do not claim READY at this stage.
 
 ---
 
@@ -284,7 +259,9 @@ Create a `Phases/` folder in the feature directory. Generate individual phase fi
 **Backend-only**: Skip phases 4-5 if no UI.
 
 Phase-planning requirements:
-- Respect epic feature ordering and declared dependencies when sequencing work.
+- Verify and correct epic feature order under Required Dependency Order. Schedule
+  enabling infrastructure/startup tasks before consumer tasks, even when this
+  differs from the default phase table.
 - When upstream features already provide needed artifacts, create tasks to integrate/extend them instead of recreating them.
 - When this feature introduces artifacts that downstream features will use, include explicit tasks and tests for stable contracts, regression safety, and handoff notes.
 - Use feature-level and epic-level acceptance baselines to drive both implementation tasks and test tasks.
@@ -568,7 +545,7 @@ Create `FeatureTasks.md` in the feature folder:
 # Feature Tasks: {{feature_id}} - [Feature Name]
 
 **Feature ID**: {{feature_id}}
-**Status**: READY_TO_DEVELOP
+**Status**: REFINING (set READY_TO_DEVELOP only after the shared gate passes)
 **Created**: [Date]
 **Last Updated**: [Date]
 
@@ -716,9 +693,20 @@ For phases with code implementation, invoke `code-review` MCP command with `feat
 
 ---
 
+## Phase 4.5: Validate the Completed Refinement
+
+Execute the included **Shared Feature Readiness Gate**, R1–R6, against the
+finished feature, task, phase, contract, and acceptance documents. Repair gaps
+within the agreed scope, including missing tracking/checkpoint templates, and
+revalidate. Save `readiness-validation.md` with evidence and a final verdict.
+Only PASS permits Phase 5. On BLOCKED, preserve the folder and mark readiness
+blocked; explain the exact remaining decision instead of claiming completion.
+
+---
+
 ## Phase 5: Move Feature to 02_READY_TO_DEVELOP
 
-1. **Move the entire feature folder** from `01_SUBMITTED/` to `02_READY_TO_DEVELOP/`
+1. **Only after the shared gate passes**, move the entire feature folder from `01_SUBMITTED/` to `02_READY_TO_DEVELOP/`. For a re-refinement already in READY, update it in place. Refresh report paths/hashes after state tracking edits.
 2. **Update FeatureDescription.md** — append state tracking:
 
 ```markdown
@@ -797,19 +785,19 @@ Next Steps:
 
 ## Rules
 
-1. **Technology-agnostic tasks (CRITICAL)** - NO code snippets, class definitions, method signatures, or technology-specific terminology in phase/task files
+1. **Behavior-focused tasks** - use prose, Gherkin, and schemas for contracts; exact filenames, fields, versions, and build commands are allowed. Keep implementation code samples in auxiliary files.
 2. **Use Gherkin for behavior** - Given/When/Then for all behavior specs; Mermaid for complex flows; plain language for data structures
 3. **Code samples in auxiliary files only** - if truly necessary, put in `Phases/code-samples/phase-N-task-M-sample.md` and reference from the task
-4. **Phase precedence** - data layer first, business logic second, UI last
-5. **Task independence** - within a phase, tasks should be completable independently and testable individually
+4. **Phase precedence** - prerequisite implementation and verification first; use the default phase sequence only where it respects actual dependencies
+5. **Task dependencies** - record real prerequisite edges within and across phases; never assume tasks in the same phase are independent
 6. **Every implementation task gets a unit test task** - no exceptions
 7. **Boy Scout Rule** - fix pre-existing warnings and failures before proceeding
 8. **Build/test commands must exist** - cannot proceed to Phase 0 without valid commands
 9. **Time estimates required** - both Man/Hour and AI/Hour for every task
-10. **No unresolved validation markers** - if tags like `[NEEDS VALIDATION]` (or equivalent) exist, refinement is blocked
+10. **No unresolved in-scope blockers** - classify markers using the shared gate; do not reopen resolved decisions or block on unrelated future enhancements. Future work required by current behavior is a dependency and blocks its consumers.
 11. **Critical-readiness standard** - only proceed when requirements support full implementation planning and complete test planning (acceptance + edge cases)
 12. **Read the whole feature folder** - refinement must consider all relevant files in the feature directory, not only the standard templates
-13. **Honor epic baselines and feature order** - if a parent epic exists, use its sequencing, baselines, and dependency graph as planning inputs
+13. **Verify epic baselines and feature order** - use linked epic plans as inputs, then correct missing cross-epic prerequisites and invalid ordering against actual requirements/code
 14. **Plan for reusable artifacts** - reuse upstream artifacts when available and add contract/regression tests for artifacts downstream features will consume
 
 ---
@@ -833,12 +821,12 @@ Include time for: reading code, writing code, manual testing, code review prep (
 |----------|--------|
 | Feature not found | Report clearly, list available features in 01_SUBMITTED |
 | FeatureDescription.md missing | Cannot proceed — stop and report |
-| Unresolved validation markers in spec | Stop refinement, list pending points, ask user to resolve (recommend `deep-dive`) |
-| Requirements too ambiguous for implementation/testing | Stop refinement, list concrete missing details, request clarification |
+| Current material specification gap | Resolve from existing authority first; ask only for remaining decisions beyond that authority |
+| Technical contract gaps | Document choices within scope, reconcile the plan, and rerun the shared gate |
 | Unable to create Phases folder | Report error and which step failed |
 | Unable to move feature | Report error but note refinement is complete |
-| Incomplete design documents | Proceed with available information, note gaps in FeatureTasks.md |
-| Build/test commands undocumented | Use placeholders, ask user, block Phase 0 start |
+| Incomplete required design documents | Repair before READY or record a material blocker |
+| Build/test commands undocumented | Inspect scripts/CI; resolve required commands before READY |
 
 ---
 

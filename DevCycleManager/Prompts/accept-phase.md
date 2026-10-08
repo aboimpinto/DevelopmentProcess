@@ -78,6 +78,10 @@ This procedure is DONE when:
 3. Read: phase file, `FeatureTasks.md`, `FeatureDescription.md`, `start-feature-report-*.md`
 4. **If not found** → Stop and report error
 
+Before accepting any task, apply Required Dependency Order and inspect its
+prerequisite verification evidence. Missing prerequisites block acceptance of
+the dependent work, even when other checkpoint fields are complete.
+
 ### 1.2 Validate Checkpoint Status
 
 Read the checkpoint section. If status is `NotStarted` or missing:
@@ -148,7 +152,9 @@ If all tasks are COMPLETED or SKIPPED → proceed to Phase 4.
 
 If any tasks are incomplete, present options:
 1. **Continue working** — run `continue-implementation` to finish
-2. **Skip tasks** — requires justification for each
+2. **Skip tasks** — requires justification for each; unavailable prerequisites of
+   retained behavior cannot be skipped. Remove dependent scope only with explicit
+   authorization and reconcile its acceptance criteria first.
 
 If `Workflow Mode` is interactive and user chooses to skip:
 - Request justification

@@ -172,6 +172,31 @@ This hands off to `continue-implementation`, `accept-phase`, and `complete-featu
 
 ## Quality Gates
 
+Refinement and start share one readiness procedure,
+[`feature-readiness.md`](DevCycleManager/Prompts/feature-readiness.md), included
+in both MCP responses. Before declaring READY, the client must check scope,
+persisted/public contracts, failure ordering, compatibility, acceptance-test
+traceability, and execution prerequisites, then save `readiness-validation.md`
+with evidence. Start verifies the same criteria against current inputs.
+Routine technical choices are resolved within the agreed scope; only unresolved
+material decisions require user input. These are client-executed checks, not
+server-side validation of the project's files.
+
+All lifecycle recipes also include the shared
+[`dependency-order.md`](DevCycleManager/Prompts/dependency-order.md) policy.
+Required prerequisites must be implemented and verified before consumer tasks
+start. Refinement may schedule enabling tasks first inside the same feature;
+unavailable prerequisites owned by later features block READY. Existing feature
+IDs and green tests using separately provisioned services do not prove delivery.
+Review checks required files missing from the diff, and completion requires the
+supported startup/user workflow where applicable. Missing or empty dependency
+policy causes recipe delivery to fail rather than silently omit the gate.
+These instructions constrain client execution; the server does not independently
+inspect project dependency evidence or certify its truth.
+
+Run server regression tests with `python -m unittest discover -s tests -v` in an
+environment with `DevCycleManager/requirements.txt` installed.
+
 Every phase must pass before acceptance:
 
 | Gate | Requirement |

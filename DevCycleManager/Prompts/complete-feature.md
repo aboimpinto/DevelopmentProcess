@@ -136,6 +136,17 @@ Execute project test command. Required: 100% passing. If fails → report failur
 
 ---
 
+### 4.3 Verify Delivered Dependencies and Startup
+
+Apply the delivery gate in Required Dependency Order. Every prerequisite of the
+delivered behavior must be VERIFIED with current evidence. Run the supported
+setup and user workflow, including repeated startup where applicable, in an
+isolated environment. Record revision, commands and outcomes. Missing required
+evidence blocks completion; phase checkboxes and fixture-based tests cannot
+substitute for it.
+
+---
+
 ## Phase 5: Compile Lessons Learned
 
 ### 5.1 Collect Phase-Level Lessons
