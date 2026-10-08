@@ -8,7 +8,7 @@ WORKDIR /app
 COPY DevCycleManager/requirements.txt .
 
 # Install any needed packages specified in requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --disable-pip-version-check --root-user-action=ignore -r requirements.txt
 
 # Copy the application code into the container
 COPY DevCycleManager/ .

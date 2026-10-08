@@ -3,7 +3,7 @@
 <!--
 name: code-review
 purpose: Perform comprehensive code review of a phase against CodeGuidelines
-tools: Read, Glob, Grep, Bash (git show)
+tools: Read, Write, Glob, Grep, Bash (git and declared verification commands within execution authority)
 triggers: Called by continue-implementation at phase checkpoint, or manually
 inputs: feature_id, phase_number, feature_path (optional)
 outputs: code-reviews/phase-{N}/Code-Review-{timestamp}-{STATUS}.md
@@ -80,12 +80,15 @@ This MCP tool is recipe-oriented. A `pending_execution` response means the MCP c
 
 ### 1.2 Determine If Review Is Required
 
-**SKIP** for:
-- Phase 0 (Health Check) or Phase 1 (Planning & Analysis)
-- Config-only, documentation-only, or simple DTO-only phases
-
-**REQUIRE** for:
-- Business logic, presentation logic, UI code, data access, integration code, complex tests
+Read the Code review applicability in the explicit phase gate contract.
+**SKIP** when it is NOT_APPLICABLE with a scope reason; keep any separately
+required validation. **REQUIRE** when it is REQUIRED. Do not override the flag
+from a work class, phase name, number, or changed-file extension. If development
+finds no review scope, update applicability with a recorded reason before this
+boundary. Existing unresolved findings are not a reason to skip review.
+Test-only assertion assessment belongs to test verification, not a production-code
+review loop. Reconcile stale test-only review declarations through the shared scope
+policy before dispatch; preserve real production findings with their production owner.
 
 If skipping, report:
 ```markdown
@@ -207,6 +210,31 @@ Generate the review report using this template:
 
 **Test Quality**: {Excellent / Good / Needs Improvement}
 
+**Gate Policy**: devcycle-phase-quality/v1
+**Work Class**: {PRODUCTION_CODE / TEST_ONLY / DOCUMENTATION_ONLY / MIXED}
+**Contract Reference**: {phase gate contract path}
+**Reviewed / Tested Revision**: {repository and revision; dirty-diff identity if any}
+
+### Execution Evidence
+| Required suite/scenario | Command | Discovered / Executed / Passed / Failed / Skipped | Outcome | Raw report |
+| --- | --- | --- | --- | --- |
+{one row per required unit/integration/browser/regression gate; distinguish not executed from failed}
+
+### Instrumented Production Coverage
+**Applicability and Reason**: {Required with production scope, or Not Applicable with reason}
+**Includes / Excludes**: {exact production files and documented exclusions}
+| Metric | Covered / Total | Measured % | Required threshold | Outcome | Report |
+| --- | --- | --- | --- | --- | --- |
+| Lines | {measured or NOT_MEASURED} | | | | |
+| Branches | {measured or NOT_MEASURED} | | | | |
+| Functions | {measured or NOT_MEASURED} | | | | |
+| Statements | {measured or NOT_MEASURED} | | | | |
+
+Never replace measured coverage with a qualitative rating, test-file count or
+traceability-manifest result. For test-only/documentation-only work without an
+assigned production measurement, use Not Applicable rather than fabricated zeros.
+Missing/failing required evidence is CRITICAL (Must Fix), producing NEEDS_CHANGES.
+
 ### Behavior Spec Alignment
 {For each Gherkin scenario: covered tests + missing coverage}
 
@@ -295,5 +323,5 @@ Status icons: APPROVED, APPROVED_WITH_NOTES, NEEDS_CHANGES
 ## Related Commands
 
 - **continue-implementation** — invokes this review at phase checkpoints
-- **accept-phase** — requires APPROVED status from this review for code-relevant phases
+- **accept-phase** — requires APPROVED status from this review when needCodeReview is true
 - **refine-feature** — creates the phase structure and Gherkin specs this review validates against

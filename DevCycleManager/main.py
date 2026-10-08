@@ -1,16 +1,93 @@
+from client_execution import bind_client_execution
 import os
 import re
 import json
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Union, List, Any, Dict
+from typing import Optional, Union, List, Any, Dict, Tuple
 
-from fastapi import FastAPI, Response, status
+from fastapi import FastAPI, HTTPException, Response, status
 from pydantic import BaseModel, Field
 from deep_dive_host import HOST_STAGES, hosted_deep_dive_recipe
 
 # --- Constants & Configuration ---
 # Path to the directory containing prompt/config files
 PROMPTS_DIR = Path(__file__).parent / "Prompts"
+
+DEEP_DIVE_MODES = ("comprehensive", "targeted")
+DEEP_DIVE_RESPONSE_MODES = ("adaptive_interview", "question_manifest")
+FEATURE_WORKFLOW_MODES = ("autonomous", "single_phase")
+ACCEPTANCE_POLICY_VERSION = "acceptance-responsibility/v1"
+ACCEPTANCE_POLICY_TOOLS = frozenset(("submit-epic", "submit-feature", "create-epic-features", "link-feature-to-epic", "design-feature", "deep-dive", "refine-feature", "start-feature", "continue-implementation", "code-review", "accept-phase", "complete-feature"))
+QUALITY_GATE_POLICY_VERSION = "devcycle-phase-quality/v2"
+QUALITY_GATE_TOOLS = frozenset(("refine-feature", "start-feature", "continue-implementation",
+                               "code-review", "accept-phase", "complete-feature"))
+
+
+def normalize_feature_workflow_mode(workflow_mode: Optional[str]) -> str:
+    """Validate execution pacing at the MCP boundary; omission means autonomous."""
+    normalized = workflow_mode or "autonomous"
+    if normalized not in FEATURE_WORKFLOW_MODES:
+        raise ValueError(
+            f"Unsupported workflow_mode: {normalized}. "
+            f"Expected one of: {', '.join(FEATURE_WORKFLOW_MODES)}"
+        )
+    return normalized
+
+
+@dataclass(frozen=True)
+class DeepDiveRequest:
+    """Validated immutable scope for one deep-dive recipe execution."""
+
+    file_path: str
+    mode: str
+    focus: Tuple[str, ...]
+    response_mode: str
+
+    @classmethod
+    def create(
+        cls,
+        file_path: str,
+        mode: Optional[str] = None,
+        focus: Optional[List[str]] = None,
+        response_mode: Optional[str] = None,
+    ) -> "DeepDiveRequest":
+        if not isinstance(file_path, str) or not file_path.strip():
+            raise ValueError("Deep-dive file_path is required")
+
+        normalized_mode = mode or "comprehensive"
+        if normalized_mode not in DEEP_DIVE_MODES:
+            raise ValueError(
+                f"Unsupported deep-dive mode: {normalized_mode}. "
+                f"Expected one of: {', '.join(DEEP_DIVE_MODES)}"
+            )
+
+        normalized_response_mode = response_mode or "adaptive_interview"
+        if normalized_response_mode not in DEEP_DIVE_RESPONSE_MODES:
+            raise ValueError(
+                f"Unsupported deep-dive response_mode: {normalized_response_mode}. "
+                f"Expected one of: {', '.join(DEEP_DIVE_RESPONSE_MODES)}"
+            )
+
+        if focus is None:
+            normalized_focus: Tuple[str, ...] = ()
+        else:
+            if not isinstance(focus, (list, tuple)):
+                raise ValueError("Deep-dive focus must be an array of questions")
+            if any(not isinstance(question, str) or not question.strip() for question in focus):
+                raise ValueError("Deep-dive focus questions must be non-empty strings")
+            normalized_focus = tuple(question.strip() for question in focus)
+
+        if normalized_mode == "targeted" and not normalized_focus:
+            raise ValueError("Targeted deep-dive requires at least one focus question")
+
+        return cls(
+            file_path=file_path.strip(),
+            mode=normalized_mode,
+            focus=normalized_focus,
+            response_mode=normalized_response_mode,
+        )
+
 
 # --- Mocking the MCP Context/Sampling for the Prototype ---
 async def mock_sample_llm(prompt: str, context: Optional[str] = None) -> str:
@@ -299,6 +376,7 @@ async def run_refine_feature(feature_id: str, feature_path: Optional[str] = None
             "CLAUDE.md"
         ],
         "outputs": [
+            "FeatureDescription.md",
             "FeatureTasks.md",
             "Phases/phase-0-health-check.md",
             "Phases/phase-1-planning-analysis.md",
@@ -335,14 +413,16 @@ async def run_start_feature(feature_id: str, feature_path: Optional[str] = None,
         }
 
     # Replace placeholders with actual values
+    resolved_workflow_mode = normalize_feature_workflow_mode(workflow_mode)
     procedure = procedure_template.replace("{{feature_id}}", feature_id or "")
     procedure = procedure.replace("{{feature_path}}", feature_path or "[Not provided - search in {MEMORY_BANK_PATH}/Features/ as defined in CLAUDE.md]")
-    procedure = procedure.replace("{{workflow_mode}}", workflow_mode or "[Not provided - interactive default]")
+    procedure = procedure.replace("{{workflow_mode}}", resolved_workflow_mode)
 
     return {
         "status": "pending_execution",
         "action": "execute_procedure",
         "procedure_name": "start-feature",
+        "workflow_mode": resolved_workflow_mode,
         "instructions": procedure,
         "context_folders": [
             "{memory_bank}/Overview/",
@@ -358,7 +438,7 @@ async def run_start_feature(feature_id: str, feature_path: Optional[str] = None,
             "pre-validation-report-[STATUS]-[timestamp].md",
             "start-feature-report-[timestamp].md"
         ],
-        "message": "Execute the start-feature procedure. This validates the feature (pre-validation + post-validation), creates a git branch, and moves the feature to 03_IN_PROGRESS. If `workflow_mode=autonomous`, immediately hand off into end-to-end implementation using the same workflow mode. If pre-validation fails, the process STOPS with a rejection report."
+        "message": "Execute the start-feature procedure. This validates the feature, creates a git branch, and moves it to 03_IN_PROGRESS. workflow_mode defaults to autonomous; single_phase implements and accepts exactly the first incomplete phase, then stops. If pre-validation fails, the process STOPS with a rejection report."
     }
 
 async def run_continue_implementation(feature_id: str, feature_path: Optional[str] = None, mode: Optional[str] = None, workflow_mode: Optional[str] = None) -> dict:
@@ -384,15 +464,17 @@ async def run_continue_implementation(feature_id: str, feature_path: Optional[st
         }
 
     # Replace placeholders with actual values
+    resolved_workflow_mode = normalize_feature_workflow_mode(workflow_mode)
     procedure = procedure_template.replace("{{feature_id}}", feature_id or "")
     procedure = procedure.replace("{{feature_path}}", feature_path or "[Not provided - search in {MEMORY_BANK_PATH}/Features/ as defined in CLAUDE.md]")
     procedure = procedure.replace("{{mode}}", mode or "[Not provided - default auto-detect]")
-    procedure = procedure.replace("{{workflow_mode}}", workflow_mode or "[Not provided - interactive default]")
+    procedure = procedure.replace("{{workflow_mode}}", resolved_workflow_mode)
 
     return {
         "status": "pending_execution",
         "action": "execute_procedure",
         "procedure_name": "continue-implementation",
+        "workflow_mode": resolved_workflow_mode,
         "instructions": procedure,
         "context_folders": [
             "{memory_bank}/Overview/",
@@ -416,7 +498,7 @@ async def run_continue_implementation(feature_id: str, feature_path: Optional[st
             "LessonsLearned/{feature_id}/Phase-{N}-{name}.md",
             "feature-completion-report.md (when all phases complete)"
         ],
-        "message": "Execute the continue-implementation procedure locally. FIRST write operation when entering a PENDING phase: set phase status IN_PROGRESS in BOTH phase file and FeatureTasks.md before any task work. During Phase 1, create or refresh the canonical feature-root planning document `planning-analysis-report.md` using the full feature history plus any linked epic/dependency context; later phases must read and reuse it instead of re-planning. Understand what is already done, what remains, and what downstream phases/features depend on before writing code or tests. Keep all statuses synchronized (task: PENDING->IN_PROGRESS->COMPLETED/SKIPPED, checkpoint: NOT STARTED->IN_PROGRESS->COMPLETE). Optional `mode`: finalize_current_phase. Optional `workflow_mode`: autonomous for end-to-end no-prompt progression."
+        "message": "Execute the continue-implementation procedure locally. FIRST write operation when entering a PENDING phase: set phase status IN_PROGRESS in BOTH phase file and FeatureTasks.md. Keep statuses synchronized and enforce clean configured gates: zero build/lint warnings or errors and 100% tests, repairing pre-existing failures under the Boy Scout Rule. workflow_mode defaults to autonomous; single_phase implements and accepts exactly one phase, then stops."
     }
 
 async def run_accept_phase(feature_id: str, phase_number: int, feature_path: Optional[str] = None, workflow_mode: Optional[str] = None) -> dict:
@@ -443,15 +525,17 @@ async def run_accept_phase(feature_id: str, phase_number: int, feature_path: Opt
         }
 
     # Replace placeholders with actual values
+    resolved_workflow_mode = normalize_feature_workflow_mode(workflow_mode)
     procedure = procedure_template.replace("{{feature_id}}", feature_id or "")
     procedure = procedure.replace("{{phase_number}}", str(phase_number) if phase_number is not None else "")
     procedure = procedure.replace("{{feature_path}}", feature_path or "[Not provided - search in {MEMORY_BANK_PATH}/Features/ as defined in CLAUDE.md]")
-    procedure = procedure.replace("{{workflow_mode}}", workflow_mode or "[Not provided - interactive default]")
+    procedure = procedure.replace("{{workflow_mode}}", resolved_workflow_mode)
 
     return {
         "status": "pending_execution",
         "action": "execute_procedure",
         "procedure_name": "accept-phase",
+        "workflow_mode": resolved_workflow_mode,
         "instructions": procedure,
         "context_folders": [
             "{memory_bank}/Features/00_EPICS/",
@@ -470,7 +554,7 @@ async def run_accept_phase(feature_id: str, phase_number: int, feature_path: Opt
             "Next phase preview (if not final phase)",
             "feature-completion-report.md (if final phase)"
         ],
-        "message": "Execute the accept-phase procedure. This formalizes phase acceptance, updates all documentation with COMPLETED status and time metrics, creates git commit, and previews the next step. In `workflow_mode=autonomous`, continue automatically to the next phase or feature completion unless a blocking condition requires manual intervention."
+        "message": "Execute the accept-phase procedure. Accept only evidence from fully green configured build, lint, and test commands. workflow_mode defaults to autonomous; single_phase stops after this phase is accepted."
     }
 
 async def run_code_review(feature_id: str, phase_number: int, feature_path: Optional[str] = None) -> dict:
@@ -529,10 +613,11 @@ async def run_complete_feature(feature_id: str, feature_path: Optional[str] = No
     3. Verifies build and tests pass (0 errors, 0 warnings, 100% tests)
     4. Compiles Lessons Learned from all phases into feature-level document
     5. Asks user for additional lessons they want to highlight (or skips the prompt in autonomous workflow mode)
-    6. Updates all documentation with completion status
-    7. Creates completion reports (validation, metrics, lessons learned)
-    8. Moves feature to 04_COMPLETED folder
-    9. Creates completion git commit and pushes
+    6. Updates feature documentation with completion status
+    7. Synchronizes linked epic documentation, acceptance tests, and design/screen tracking when present
+    8. Creates completion reports (validation, metrics, lessons learned)
+    9. Moves feature to 04_COMPLETED folder
+    10. Creates completion git commit and pushes
     """
     # Load the procedure template
     try:
@@ -556,6 +641,7 @@ async def run_complete_feature(feature_id: str, feature_path: Optional[str] = No
         "instructions": procedure,
         "context_folders": [
             "{memory_bank}/Features/03_IN_PROGRESS/",
+            "{memory_bank}/Features/00_EPICS/",
             "{memory_bank}/LessonsLearned/"
         ],
         "context_files": [
@@ -565,29 +651,32 @@ async def run_complete_feature(feature_id: str, feature_path: Optional[str] = No
             "feature-completion-report.md",
             "{memory_bank}/LessonsLearned/{feature_id}/Feature-Completion-LessonsLearned.md",
             "FeatureTasks.md updated with completion status",
+            "Linked epic documentation updated when Parent Epic exists",
             "Feature folder moved to 04_COMPLETED/",
             "Git commit with completion details"
         ],
-        "message": "Execute the complete-feature procedure. This validates all phases are complete, compiles Lessons Learned, creates completion reports, and moves the feature to 04_COMPLETED. In `workflow_mode=autonomous`, use auto-detected lessons only instead of pausing for extra user input. Running this command is confirmation to proceed (no extra yes/no gate)."
+        "message": "Execute the complete-feature procedure. This validates all phases are complete, compiles Lessons Learned, synchronizes any linked epic documentation (including acceptance/design tracking when present), and moves the feature to 04_COMPLETED. In `workflow_mode=autonomous`, use auto-detected lessons only instead of pausing for extra user input. Running this command is confirmation to proceed (no extra yes/no gate)."
     }
 
-async def run_deep_dive(file_path: str, response_mode: Optional[str] = None, stage: Optional[str] = None) -> dict:
-    """
-    The Recipe for conducting a deep-dive interview about a spec file.
-    Guides the LLM through an intensive interview process to gather comprehensive
-    information about a specification, leaving no stone unturned:
-    1. Read and analyze the spec file
-    2. Identify file type (FeatureDescription, Phase, Overview, etc.)
-    3. Conduct thorough interview using AskUserQuestion tool
-    4. Probe deeply on vague answers
-    5. Read and incorporate referenced documents
-    6. Update the spec file with gathered information
-    """
+async def run_deep_dive(
+    file_path: str,
+    mode: Optional[str] = None,
+    focus: Optional[List[str]] = None,
+    response_mode: Optional[str] = None,
+    stage: Optional[str] = None,
+) -> dict:
+    """Return a single-target comprehensive or targeted deep-dive recipe."""
     if response_mode == "host_stage":
         return hosted_deep_dive_recipe(PROMPTS_DIR, file_path, stage)
-    if response_mode not in (None, "adaptive_interview") or stage is not None:
-        raise ValueError("Unsupported deep-dive response mode or stage")
-    # Load the procedure template
+    if stage is not None:
+        raise ValueError("stage requires host_stage response mode")
+    request = DeepDiveRequest.create(
+        file_path=file_path,
+        mode=mode,
+        focus=focus,
+        response_mode=response_mode,
+    )
+
     try:
         with open(PROMPTS_DIR / "deep-dive.md", "r", encoding="utf-8") as f:
             procedure_template = f.read()
@@ -597,14 +686,29 @@ async def run_deep_dive(file_path: str, response_mode: Optional[str] = None, sta
             "message": "deep-dive.md prompt template not found in Prompts directory."
         }
 
-    # Replace placeholders with actual values
-    procedure = procedure_template.replace("{{file_path}}", file_path or "")
+    focus_text = (
+        "\n".join(f"- {question}" for question in request.focus)
+        if request.focus
+        else "- [No targeted focus supplied; use the selected file-type checklist]"
+    )
+    procedure = procedure_template.replace("{{file_path}}", request.file_path)
+    procedure = procedure.replace("{{mode}}", request.mode)
+    procedure = procedure.replace("{{focus}}", focus_text)
+    procedure = procedure.replace("{{response_mode}}", request.response_mode)
+    manifest_mode = request.response_mode == "question_manifest"
 
     return {
         "status": "pending_execution",
         "action": "execute_procedure",
         "procedure_name": "deep-dive",
         "instructions": procedure,
+        "deep_dive_scope": {
+            "target_file": request.file_path,
+            "mode": request.mode,
+            "focus": list(request.focus),
+            "response_mode": request.response_mode,
+            "mutation_scope": [] if manifest_mode else [request.file_path],
+        },
         "context_folders": [
             "{memory_bank}/Overview/",
             "{memory_bank}/Architecture/",
@@ -615,9 +719,15 @@ async def run_deep_dive(file_path: str, response_mode: Optional[str] = None, sta
             "CLAUDE.md"
         ],
         "outputs": [
-            f"{file_path} (updated with new sections)"
+            "DeepDiveQuestionManifestV1 JSON"
+            if manifest_mode
+            else f"{request.file_path} (the only file that may be updated)"
         ],
-        "message": "Execute the deep-dive procedure. This conducts an intensive interview about the spec file using AskUserQuestion, probing for comprehensive details on technical implementation, UX, constraints, and tradeoffs. The spec file will be updated with all gathered information."
+        "message": (
+            f"Execute the {request.mode} deep-dive procedure for exactly one target file "
+            f"using response mode {request.response_mode}. "
+            "Linked EPICs, FEATs, and references are read-only context."
+        )
     }
 
 # --- JSON-RPC Pydantic Models ---
@@ -637,6 +747,24 @@ class JsonRpcResponse(BaseModel):
 app = FastAPI(title="DevCycleManager (Remote Process)")
 
 
+def extract_tool_call(params: Optional[Union[Dict[str, Any], List[Any]]]) -> tuple[str, Dict[str, Any]]:
+    """Accept standard MCP `arguments` while preserving the legacy `input` client shape."""
+    if not isinstance(params, dict):
+        raise ValueError("Invalid tools/call params: expected an object")
+
+    tool_name = params.get("name")
+    if not isinstance(tool_name, str) or not tool_name.strip():
+        raise ValueError("Invalid tools/call params: name is required")
+
+    raw_args = params.get("arguments", params.get("input", {}))
+    if raw_args is None:
+        raw_args = {}
+    if not isinstance(raw_args, dict):
+        raise ValueError("Invalid tools/call params: arguments must be an object")
+
+    return tool_name, raw_args
+
+
 def enrich_execution_contract(result: dict, tool_name: str) -> dict:
     """
     Add deterministic orchestration hints so any MCP client can act consistently.
@@ -652,6 +780,25 @@ def enrich_execution_contract(result: dict, tool_name: str) -> dict:
     result.setdefault("tool_name", tool_name)
 
     if status_value == "pending_execution":
+        if tool_name in QUALITY_GATE_TOOLS:
+            # Fail closed if the shared policy is missing; never serve a partial
+            # quality recipe. Both MCP response representations carry this text.
+            policy = (PROMPTS_DIR / "phase-quality-policy.md").read_text(encoding="utf-8")
+            if QUALITY_GATE_POLICY_VERSION not in policy:
+                raise ValueError("Shared phase quality policy version is missing or incompatible")
+            command_policy = (PROMPTS_DIR / "project-test-plan-authoring-policy.md").read_text(encoding="utf-8")
+            policy += "\n\n" + command_policy
+            result["quality_gate_policy_version"] = QUALITY_GATE_POLICY_VERSION
+            gate_schema = json.loads((PROMPTS_DIR / "phase-gates-exchange-v1.schema.json").read_text(encoding="utf-8"))
+            result["phase_gate_exchange_schema"] = gate_schema
+            policy += "\n\nExact phase gate JSON Schema (publish <phase-document>.gates.json; the phase document filename is its opaque phaseId):\n" + json.dumps(gate_schema, indent=2)
+            result["instructions"] = policy + "\n\n---\n\n" + result["instructions"]
+        if tool_name in ACCEPTANCE_POLICY_TOOLS and "deep_dive_host_contract" not in result:
+            acceptance_policy = (PROMPTS_DIR / "acceptance-responsibility-policy.md").read_text(encoding="utf-8")
+            if ACCEPTANCE_POLICY_VERSION not in acceptance_policy:
+                raise ValueError("Acceptance responsibility policy version is missing or incompatible")
+            result["acceptance_policy_version"] = ACCEPTANCE_POLICY_VERSION
+            result["instructions"] = acceptance_policy + "\n\n---\n\n" + result["instructions"]
         # This is a successful tool call that returns a recipe for client-side execution.
         result.setdefault("tool_call_success", True)
         result.setdefault("execution_owner", "client_llm")
@@ -671,7 +818,7 @@ def enrich_execution_contract(result: dict, tool_name: str) -> dict:
     else:
         result.setdefault("tool_call_success", True)
 
-    return result
+    return bind_client_execution(result, tool_name)
 
 @app.post("/", response_model=JsonRpcResponse, response_model_exclude_none=True)
 async def json_rpc_handler(request: JsonRpcRequest):
@@ -681,7 +828,7 @@ async def json_rpc_handler(request: JsonRpcRequest):
     if request.method == "initialize":
         return JsonRpcResponse(id=request.id, result={
             "protocolVersion": "2024-11-05",
-            "serverInfo": {"name": "DevCycleManager", "version": "0.2.1-remote"},
+            "serverInfo": {"name": "DevCycleManager", "version": "0.3.0-remote"},
             "capabilities": {"tools": {"listChanged": False}}
         })
 
@@ -772,41 +919,41 @@ async def json_rpc_handler(request: JsonRpcRequest):
                 },
                 {
                     "name": "start-feature",
-                    "description": "Start implementing a feature. Validates (pre + post), creates git branch, and moves from 02_READY_TO_DEVELOP to 03_IN_PROGRESS. Optionally launches autonomous end-to-end workflow when `workflow_mode` is set. Rejects if documentation is incomplete or ambiguous.",
+                    "description": "Returns operations for the calling coding agent to execute locally. Start implementing a feature. Validates (pre + post), creates a git branch, moves to 03_IN_PROGRESS, and by default continues autonomously. Set workflow_mode=single_phase to implement and accept only the next phase.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
                             "feature_id": {"type": "string", "description": "The feature ID (e.g., FEAT-001) to start"},
                             "feature_path": {"type": "string", "description": "Optional: Direct path to the feature folder if known"},
-                            "workflow_mode": {"type": "string", "description": "Optional: set to 'autonomous' to continue from start-feature through all phases to completion without routine user interaction"}
+                            "workflow_mode": {"type": "string", "enum": ["autonomous", "single_phase"], "default": "autonomous", "description": "Execution pacing. autonomous continues end-to-end (default); single_phase implements and accepts exactly the next phase, then stops."}
                         },
                         "required": ["feature_id"]
                     }
                 },
                 {
                     "name": "continue-implementation",
-                    "description": "Continue implementing an IN_PROGRESS feature. Phase 1 creates or refreshes the canonical `planning-analysis-report.md` using feature, epic, and dependency context; later phases must read and reuse it instead of re-planning. Also orchestrates task execution, quality gates (build/test/review), downstream-aware test coverage, phase completion, and LessonsLearned documents. With `workflow_mode=autonomous`, it continues through code review, phase acceptance, next phases, and final completion without routine user interaction.",
+                    "description": "Returns operations for the calling coding agent to execute locally. Continue implementing an IN_PROGRESS feature. Phase 1 creates or refreshes the canonical `planning-analysis-report.md` using feature, epic, and dependency context; later phases must read and reuse it instead of re-planning. Also orchestrates task execution, quality gates (build/test/review), downstream-aware test coverage, phase completion, and LessonsLearned documents. With `workflow_mode=autonomous`, it continues through code review, phase acceptance, next phases, and final completion without routine user interaction.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
                             "feature_id": {"type": "string", "description": "The feature ID (e.g., FEAT-001) to continue implementing"},
                             "feature_path": {"type": "string", "description": "Optional: Direct path to the feature folder if known"},
                             "mode": {"type": "string", "description": "Optional: set to 'finalize_current_phase' to force validation + phase-finalization reconciliation when tasks are done but statuses are not synchronized"},
-                            "workflow_mode": {"type": "string", "description": "Optional: set to 'autonomous' to continue through review, acceptance, next phases, and feature completion without routine user prompts"}
+                            "workflow_mode": {"type": "string", "enum": ["autonomous", "single_phase"], "default": "autonomous", "description": "Execution pacing. autonomous continues end-to-end (default); single_phase implements and accepts exactly the current/next phase, then stops."}
                         },
                         "required": ["feature_id"]
                     }
                 },
                 {
                     "name": "accept-phase",
-                    "description": "Accept a completed phase. Validates requirements, marks phase as COMPLETED in all files (phase file, FeatureTasks.md, start-feature-report), updates time tracking, creates git commit, and previews next phase. With `workflow_mode=autonomous`, it continues automatically to the next phase or feature completion when safe.",
+                    "description": "Returns operations for the calling coding agent to execute locally. Accept a completed phase. Validates requirements, marks phase as COMPLETED in all files (phase file, FeatureTasks.md, start-feature-report), updates time tracking, creates git commit, and previews next phase. With `workflow_mode=autonomous`, it continues automatically to the next phase or feature completion when safe.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
                             "feature_id": {"type": "string", "description": "The feature ID (e.g., FEAT-001)"},
                             "phase_number": {"type": "integer", "description": "The phase number to accept (e.g., 1, 2, 3)"},
                             "feature_path": {"type": "string", "description": "Optional: Direct path to the feature folder if known"},
-                            "workflow_mode": {"type": "string", "description": "Optional: set to 'autonomous' to continue the end-to-end workflow after acceptance without routine user prompts"}
+                            "workflow_mode": {"type": "string", "enum": ["autonomous", "single_phase"], "default": "autonomous", "description": "Execution pacing. autonomous continues to the next phase (default); single_phase stops after this phase is accepted."}
                         },
                         "required": ["feature_id", "phase_number"]
                     }
@@ -826,7 +973,7 @@ async def json_rpc_handler(request: JsonRpcRequest):
                 },
                 {
                     "name": "complete-feature",
-                    "description": "Complete a feature and move to COMPLETED state. Validates all phases done, compiles Lessons Learned, creates completion reports, and moves feature to 04_COMPLETED. With `workflow_mode=autonomous`, it skips the extra lessons prompt and uses auto-detected lessons only. Invocation is treated as confirmation to proceed.",
+                    "description": "Complete a feature and move to COMPLETED state. Validates all phases done, compiles Lessons Learned, synchronizes linked epic documentation (including acceptance tests and design/screen tracking when present), creates completion reports, and moves the feature to 04_COMPLETED. With `workflow_mode=autonomous`, it skips the extra lessons prompt and uses auto-detected lessons only. Invocation is treated as confirmation to proceed.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
@@ -839,13 +986,15 @@ async def json_rpc_handler(request: JsonRpcRequest):
                 },
                 {
                     "name": "deep-dive",
-                    "description": "Conduct an intensive interview about a spec file. Reads the file, interviews the user using AskUserQuestion tool to gather comprehensive details on technical implementation, UX, constraints, tradeoffs, and edge cases. Probes deeply until all ambiguity is resolved. Updates the spec file with gathered information.",
+                    "description": "Conduct a single-target comprehensive or targeted interview about one spec file. Linked EPICs, FEATs, and references are read-only context; only the target file may be updated.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
-                            "file_path": {"type": "string", "description": "The path to the spec file to deep-dive into (e.g., {memory_bank}/Features/01_SUBMITTED/FEAT-001-feature-name/FeatureDescription.md)"},
-                            "response_mode": {"type": "string", "enum": ["adaptive_interview", "host_stage"], "default": "adaptive_interview"},
-                            "stage": {"type": "string", "enum": list(HOST_STAGES), "description": "Required with host_stage; returns a read-only procedure for one host-owned interview turn."}
+                            "file_path": {"type": "string", "minLength": 1, "description": "The sole spec file to deep-dive into (for example an EpicDescription.md or FeatureDescription.md)"},
+                            "mode": {"type": "string", "enum": ["comprehensive", "targeted"], "default": "comprehensive", "description": "Use comprehensive for an initial full interview, or targeted to resolve supplied focus questions only"},
+                            "focus": {"type": "array", "items": {"type": "string", "minLength": 1}, "description": "Questions or validation points to resolve. Required when mode is targeted."},
+                            "response_mode": {"type": "string", "enum": ["adaptive_interview", "question_manifest", "host_stage"], "default": "adaptive_interview", "description": "Use adaptive_interview for a conversational interview, question_manifest for a complete question batch, or host_stage for one host-owned UI turn."},
+                            "stage": {"type": "string", "enum": list(HOST_STAGES), "description": "Required with host_stage; no file mutation."}
                         },
                         "required": ["file_path"]
                     }
@@ -854,10 +1003,8 @@ async def json_rpc_handler(request: JsonRpcRequest):
         })
 
     elif request.method == "tools/call":
-        tool_name = request.params.get("name")
-        tool_args = request.params.get("arguments", request.params.get("input", {}))
-
         try:
+            tool_name, tool_args = extract_tool_call(request.params)
             if tool_name == "init-project":
                 result = await run_init_project()
             elif tool_name == "submit-epic":
@@ -930,6 +1077,8 @@ async def json_rpc_handler(request: JsonRpcRequest):
             elif tool_name == "deep-dive":
                 result = await run_deep_dive(
                     file_path=tool_args.get("file_path"),
+                    mode=tool_args.get("mode"),
+                    focus=tool_args.get("focus"),
                     response_mode=tool_args.get("response_mode"),
                     stage=tool_args.get("stage")
                 )

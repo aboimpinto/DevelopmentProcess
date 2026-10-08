@@ -14,7 +14,11 @@ related: refine-feature, continue-implementation, accept-phase
 
 - **Feature ID**: {{feature_id}}
 - **Feature Path** (optional): {{feature_path}}
-- **Workflow Mode** (optional): {{workflow_mode}}
+- **Workflow Mode**: {{workflow_mode}}
+
+Execution modes:
+- `autonomous` (default): start the FEAT and continue through every phase and feature completion.
+- `single_phase`: start the FEAT, implement and accept exactly the first incomplete phase, then stop before activating another phase.
 
 ---
 
@@ -40,11 +44,23 @@ This procedure is DONE when:
 - [ ] Feature folder moved to `03_IN_PROGRESS/`
 - [ ] FeatureDescription.md updated with state change
 - [ ] Parent epic updated (if linked)
-- [ ] Git commit created with validation summary
+- [ ] Startup changes finalized after the report; authorized commits recorded where applicable and clean code handoff verified
 - [ ] Success report saved as `start-feature-report-{timestamp}.md`
-- [ ] If `Workflow Mode = autonomous`, handoff to `continue-implementation` initiated with the same workflow mode
+- [ ] Handoff to `continue-implementation` initiated with the selected workflow mode (`autonomous` or `single_phase`)
 
 ---
+
+## Workspace Preflight (before any write)
+
+Apply the shared **Workspace entry, recovery and clean handoffs** contract for a
+fresh start. Resolve the authorized code checkout and inspect its branch, HEAD,
+staged/unstaged/untracked paths and unfinished Git operations before any setup
+writes, post-validation fixes or lifecycle transition. Existing interrupted
+feature work belongs to the resume/recovery path, not a fresh initialization.
+Keep the feature out of IN_PROGRESS until this entry check succeeds.
+Establish the authorized feature worktree/branch immediately after the read-only
+entry check and before setup writes, so setup cannot dirty the base checkout.
+Phase 4 confirms this selection; it must not carry setup edits between checkouts.
 
 ## Phase 0: Resolve Memory Bank Path
 
@@ -178,7 +194,7 @@ Incorrect → AUTO-FIX by recalculating.
 
 ### 3.3 Phase Checkpoints
 
-Each phase file must have: build verification section, test verification section, lint verification section (if configured), git commits tracking table, code reviews history table, sign-off checklist.
+Each phase file must project its explicit flags, configured checks, evidence and acceptance requirements. Add build/test/lint sections only for assigned checks, review history only for required or performed reviews, and git tracking according to the declared workflow. Do not manufacture missing gates from a template.
 
 Missing → AUTO-FIX by adding checkpoint template.
 
@@ -192,9 +208,9 @@ Missing → AUTO-FIX by adding tables.
 
 ### 3.5 Code Review History
 
-Required for code-relevant phases (2-7 with significant code, ALWAYS for phases 3-5). May skip for phases 0, 1, 8.
+Required only when needCodeReview is true. Phase numbers, positions, titles and file categories cannot change the flag. If declarations are absent, reconcile them from accepted scope with documented rationale.
 
-Each code-relevant phase checkpoint needs: Code Review History table, Current Code Review Status, Latest Review Result, Reviews Required to Pass.
+Each phase declaring required review needs: Code Review History table, Current Code Review Status, Latest Review Result, Reviews Required to Pass.
 
 Missing → AUTO-FIX by adding section.
 
@@ -216,12 +232,12 @@ Generate summary listing all validations performed, auto-fixes applied, warnings
 
 ---
 
-## Phase 4: Git Branch Creation
+## Phase 4: Confirm Feature Worktree
 
-1. Run `git status` to check if project uses git
-2. If connected to git and on `main`/`master` → create branch: `feat/{{feature_id}}-{slug}`
-3. If already on a feature branch → continue using it
-4. If not connected to git → skip, note in report
+1. Use the code repository identified by Workspace Preflight; never switch another checkout.
+2. Confirm the feature worktree/branch established during Workspace Preflight. Verify its identity and account for only the authorized setup edits made since the recorded clean baseline; do not create a new branch carrying those edits now.
+3. Verify the selected worktree belongs to `{{feature_id}}` and contains no unaccounted changes before the lifecycle move. The final startup clean check occurs after all owned setup edits and reports have been finalized.
+4. If the project explicitly does not use Git, record N/A; otherwise Git failures block setup.
 
 ---
 
@@ -251,23 +267,13 @@ If no parent epic → skip.
 
 ---
 
-## Phase 7: Git Commit and Push
+## Phase 7: Prepare Startup Finalization
 
-If connected to git:
-
-1. Stage: `git add {MEMORY_BANK_PATH}/Features/`
-2. Commit:
-   ```
-   feat({{feature_id}}): Start implementation - move to IN_PROGRESS
-
-   - Pre-validation: APPROVED
-   - Post-validation: COMPLETE
-   - Branch: {branch-name}
-   - Total estimated: {X}h
-   ```
-3. Push: `git push -u origin {branch-name}`
-
-If not connected to git → skip, note in report.
+Inventory startup changes in the authorized code checkout and external lifecycle
+document updates separately. Follow the shared workspace contract; never run Git
+in the external documentation owner's repository. Prepare the startup commit
+summary now, but finalize Git after saving the Phase 8 report so the report cannot
+leave a newly dirty checkout after a supposedly clean handoff.
 
 ---
 
@@ -279,19 +285,42 @@ Save to `03_IN_PROGRESS/{folder}/start-feature-report-{timestamp}.md` containing
 - Feature summary table (ID, name, state, branch, phases, tasks, estimates)
 - File tree of the feature folder
 - Epic status (if linked)
-- Next steps: start with Phase 0 Health Check, work phases sequentially, track time, commit after each task
+- Next steps: start with the declared initial checkpoint, work phases sequentially, track time and apply clean handoffs
 
-### 8.1 Autonomous Handoff
+### 8.1 Clean Startup Handoff
 
-If `Workflow Mode` is `autonomous`:
+After all setup documents and the success report are saved, inspect the complete
+code-checkout diff and reconcile every path under the shared workspace contract.
+Stage and commit authorized setup changes if any; do not require external docs
+in that commit or create an empty commit for them. Push only where required by
+the project's publishing policy, using its authorized remote. Verify
+`git status --porcelain=v1 --untracked-files=all` is empty after final writes.
+If finalization fails, record startup-finalization pending and do not invoke
+implementation. On retry, reconcile the existing startup state without repeating
+the lifecycle move or overwriting work. No successful start is claimed until this
+handoff succeeds.
 
-1. Do not stop after the success report.
-2. Immediately invoke `continue-implementation` with:
-   - `feature_id={{feature_id}}`
-   - `feature_path=[resolved path if known]`
-   - `workflow_mode=autonomous`
-3. Treat this as the official no-routine-prompt workflow from feature start through feature completion.
-4. Only stop if a blocking error, failed quality gate, or manual decision is required.
+### 8.2 Implementation Handoff
+
+For both supported workflow modes, do not stop after the success report. Immediately invoke `continue-implementation` with:
+
+- `feature_id={{feature_id}}`
+- `feature_path=[resolved path if known]`
+- `workflow_mode={{workflow_mode}}`
+
+Mode boundary:
+- `autonomous`: continue through all phases and feature completion without routine prompts.
+- `single_phase`: implement and accept exactly the first incomplete phase, then stop before activating another phase.
+
+For both modes, **never stop to request human sign-off**, owner attestation, CODEOWNER approval, product/technical choice, review approval, or phase acceptance. The implementation worker has **delegated decision authority**: apply the completed Deep-Dive decisions, target specification, repository evidence, project conventions, security-first defaults, and automated quality gates. If refinement contains a human-approval task, treat it as a planning defect to be resolved automatically and recorded, not as a blocker.
+
+Before implementation handoff, validate manual-test traceability:
+- Every test task marked `SKIPPED` because it cannot be automated must use exact reason `This test cannot be automated and the user needs to test it manually.` and have one matching `PENDING` entry in `ManualTestObligations.json`.
+- Every `ManualTestObligations.json` entry must trace to one skipped phase task and contain preconditions, steps, expected result, and evidence requirements.
+- Preserve valid manual skips. Never reactivate them as `PENDING` and never classify them as `COMPLETED`.
+- Reject Start Feature when either side of this traceability is missing or malformed.
+
+After initialization, execute the same shared Client execution loop as continue-implementation. Startup success is not the selected completion boundary. Unfinished tasks and failed gates require implementation or repair, not an early final answer. Stop only at the selected completion boundary or a documented inability to proceed, cancellation or explicit user pause. External release dependencies remain findings and follow-up work.
 
 ---
 
@@ -305,7 +334,8 @@ If `Workflow Mode` is `autonomous`:
 - Branch naming: `feat/{FEAT-XXX}-{slug}`
 - Update parent epic only if linked (not "N/A")
 - All auto-fixes must be documented in the post-validation summary
-- `Workflow Mode = autonomous` changes pacing, not quality: all validation, review, acceptance, and completion gates still apply
+- Workflow mode changes pacing, not quality: all validation, review, acceptance, and completion gates still apply
+- Omitted workflow mode is `autonomous`; never infer interactive pacing from an omitted value
 
 ## Error Recovery
 
@@ -326,3 +356,13 @@ If `Workflow Mode` is `autonomous`:
 - **continue-implementation** — next step after start-feature; implements tasks phase by phase
 - **accept-phase** — accepts completed phases during implementation
 - **code-review** — reviews code at phase checkpoints
+
+
+## TestPlan command handoff
+
+Follow project-test-plan-authoring/v1: write or maintain the canonical `## TestPlan`
+in `FeatureDescription.md` and `## Verification References` in each Phase.
+Refinement discovers commands statically and records UNVERIFIED; developers validate
+and update them from actual execution. Include per-repository cwd, configuration
+evidence, selections, preparation/dependencies, source inputs, generated outputs,
+and report locations. Project type informs discovery, never a default command.

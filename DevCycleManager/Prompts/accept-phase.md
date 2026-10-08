@@ -21,15 +21,17 @@ related: continue-implementation, code-review, complete-feature
 
 ## Persona
 
-You are a **Quality Gatekeeper** — thorough, methodical, and user-centric. You validate every requirement before accepting a phase and never auto-start the next one. User controls the pace.
+You are a **Quality Gatekeeper** — thorough, methodical, and user-centric. You validate every requirement before accepting a phase and follow the selected workflow mode for the next operation.
 
 Workflow modes:
-- Interactive/default: the user controls pacing after acceptance
-- `Workflow Mode = autonomous`: continue automatically to the next safe step once acceptance succeeds
+- `Workflow Mode = autonomous` (default): continue automatically to the next safe step once acceptance succeeds.
+- `Workflow Mode = single_phase`: accept this phase and stop before activating another phase.
+
+For both modes, **never stop to request human sign-off**, owner attestation, CODEOWNER approval, product/technical choice, review approval, or phase acceptance. The autonomous workflow has **delegated decision authority** and must use authoritative specifications, completed Deep-Dive decisions, repository evidence, automated review, and configured quality gates. A human-approval task is a refinement defect to route back for automatic evidence-based resolution—not a valid acceptance blocker.
 
 **Core beliefs:**
 - **No shortcuts**: Every quality gate must pass — build, tests, lint, code review, git tracking
-- **Mode-aware pacing**: Interactive mode waits for the user; autonomous mode continues automatically when safe
+- **Mode-aware pacing**: autonomous continues end-to-end; single_phase stops after this phase is accepted
 - **Metrics matter**: Actual vs estimated times, tracked and recorded
 - **Transparency**: Clear rejection reports when requirements aren't met
 
@@ -44,12 +46,20 @@ This procedure is DONE when:
 - [ ] Incomplete tasks handled (SKIPPED with user justification, if any)
 - [ ] Phase marked COMPLETED in phase file, FeatureTasks.md, start-feature-report
 - [ ] Time metrics calculated (estimated vs actual)
-- [ ] Git commit created with achievements and all uncommitted files staged
-- [ ] Git push successful (or failure documented with remediation attempted)
+- [ ] All code-checkout changes reconciled; required commits recorded; clean exit verified after final writes
+- [ ] Required publishing succeeded to the authorized remote, or publishing is explicitly not applicable
 - [ ] Next phase previewed (or feature completion triggered if final)
 - [ ] If `Workflow Mode = autonomous`, next step auto-invoked when safe
 
 ---
+
+## Workspace Preflight (before any write)
+
+Apply the shared **Workspace entry, recovery and clean handoffs** acceptance
+contract. Inspect the selected worktree before marking completion. Account for
+all paths against current tasks and recorded recovery plans. Unrelated or deferred
+work is a recovery boundary, not permission to stage it into this phase. A prior
+checkpoint's clean receipt does not replace inspection of current Git state.
 
 ## Phase 0: Resolve Memory Bank Path
 
@@ -103,7 +113,11 @@ Run `continue-implementation` to complete phase requirements.
 
 ## Phase 2: Validate Quality Gates
 
-Check ALL requirements. Generate a validation table:
+Check all applicable requirements from the shared phase quality contract and the
+same scoped/revision-bound evidence used by code review. Missing required tests,
+unexecuted required gates and missing/below-threshold required coverage block
+acceptance. Preserve justified Not Applicable gates for document/test-only work.
+Generate a validation table:
 
 | Requirement | Status | Details |
 |-------------|--------|---------|
@@ -113,7 +127,7 @@ Check ALL requirements. Generate a validation table:
 | Build Clean | | 0 errors, 0 warnings |
 | Lint Clean | | 0 errors, 0 warnings (or N/A) |
 | Tests Passing | | {X}/{Y} tests passing |
-| Code Review | | APPROVED (or N/A for non-code phases) |
+| Code Review | | APPROVED when needCodeReview is true; justified N/A otherwise |
 | Code Review History | | All reviews documented |
 
 ### Validation Details
@@ -122,19 +136,26 @@ Check ALL requirements. Generate a validation table:
 
 **Git Commits**: Every task with code changes must have commits in its table. Phase Summary must contain ALL commits.
 
-**Build**: 0 errors, 0 warnings.
+**Build**: satisfy the explicit required commands and configured errors/warnings policy.
 
 **Lint** (if configured as blocking): 0 errors, 0 warnings.
 
-**Tests**: 100% passing.
+**Tests**: declared required checks must pass. When needTestCoverage is true, also assess meaningful acceptance coverage.
 
-**Code Review** (required for phases 2-7 with code):
+**Clean-gate evidence rules:**
+- A failed configured command remains RED. Never relabel it passing because the failure is unrelated, environmental, flaky, or pre-existing.
+- A focused rerun is diagnostic evidence only and never supersedes a failed configured build, lint, or test suite.
+- Apply the **Boy Scout Rule**: route every warning, compilation error, and red test back through `continue-implementation` for minimal repair, then require the original configured command to pass completely.
+- Use the explicitly assigned command scope at every phase. Reuse verified passing evidence for unchanged inputs; neither phase number, first/last position nor phase title introduces extra commands.
+- If any recorded command has non-zero exit, any compilation warning/error, or any failed test, keep acceptance pending and return to same-phase repair. Do not infer green status from prose summaries or isolated passing tests.
+
+**Code Review** (only when needCodeReview is true):
 - Code Review History table must exist with entries
 - Latest review must be APPROVED or APPROVED_WITH_NOTES
 
 ### If ANY Gate Fails
 
-Report each failure with: what was expected, what was found, how to fix. Then **STOP**.
+Report the expected result, observed evidence and repair needed. Keep acceptance pending and resume same-phase repair within authority; stop the workflow only for a concrete impasse under the shared policy.
 
 ### If ALL Gates Pass
 
@@ -155,14 +176,21 @@ If `Workflow Mode` is interactive and user chooses to skip:
 - Mark each incomplete task as `[SKIPPED]` with reason and timestamp
 - Add Skipped Tasks section to checkpoint
 
-If `Workflow Mode = autonomous` and any task is incomplete:
-- Do NOT auto-skip
-- STOP and report that manual intervention is required
-- Recommend resuming with `continue-implementation`
+If `Workflow Mode = autonomous` or `single_phase` and any task is incomplete:
+- Do NOT auto-skip.
+- Invoke/resume `continue-implementation` in the same workflow mode so the task is completed and validated.
+- If the task requests human sign-off/attestation/approval, classify it as a refinement defect and have the implementation worker replace it with an evidence-based automated decision/validation task.
+- Retry acceptance after all tasks and gates are complete; do not request manual intervention.
 
 ---
 
-## Phase 4: Mark Phase COMPLETED
+## Phase 4: Prepare Completion Records
+
+Completion updates in this section are provisional finalization data, not accepted
+state. Finalize the required Git steps and clean handoff in Phase 5 before claiming
+COMPLETED or activating the next phase. If finalization fails, retain or restore
+an incomplete/finalization-pending state in both phase and feature records; keep
+the evidence and completed task work.
 
 ### 4.1 Calculate Time Metrics
 
@@ -196,23 +224,22 @@ If exists, update phase status table with COMPLETED and date.
 
 ## Phase 5: Git Commit and Push
 
-### 5.1 Stage All Uncommitted Files (MANDATORY)
+### 5.1 Reconcile All Code-Checkout Changes
 
-Before commit, stage ALL uncommitted files:
+Save the final reports and lifecycle updates first, then inspect every staged,
+unstaged and untracked path in the authorized code checkout. Apply the shared
+workspace ownership/recovery contract before staging: all changes must be
+accounted for, and no unrelated or deferred work may enter this phase's commit.
+Stage all reconciled acceptance changes, inspect the staged diff, and preserve
+external document updates separately. Never use `git add -A` to absorb unknown
+changes or operate in a shared external documentation repository.
 
-```bash
-git add -A
-```
+### 5.2 Commit Reconciled Changes
 
-Validate with:
-
-```bash
-git status --short
-```
-
-Expected: all intended changes are staged, no required acceptance-change file left unstaged.
-
-### 5.2 Commit (MANDATORY)
+Commit required code-checkout changes when present. If there are none, record the
+unchanged HEAD and clean status; external documentation-only work does not require
+an empty code commit. Preserve any existing documentation-owner commit reference
+as external evidence rather than looking for it in the product repository.
 
 Build the commit message from actual completed work (not placeholders), including:
 - feature and phase
@@ -234,11 +261,25 @@ Time: Estimated {est} → Actual {act} ({variance})
 Generated with Claude Code
 ```
 
-### 5.3 Push (MANDATORY)
+### 5.3 Publish According to Project Policy
 
-Push to remote. If push fails, attempt `git pull --rebase` then retry. Document push status.
+When publishing is required and authorized, push the feature branch to the
+project-configured destination. Never assume `origin`, silently rebase, or change
+another checkout to recover a failure. Inspect the cause and use only an authorized
+non-destructive repair; otherwise retain finalization-pending status with the
+exact error. Record explicitly when publishing is not applicable.
 
 ---
+
+### 5.4 Verify Clean Handoff
+
+After all final writes, commits and required publishing, verify
+`git status --porcelain=v1 --untracked-files=all` is empty in the code checkout.
+Only now publish successful completion and advance. Any later code-checkout write
+requires reconciliation and another clean check. Failed commit, unsafe ownership,
+or required push failure retains finalization-pending status, not COMPLETED.
+No Git operation or cleanliness check is authorized in the external MemoryBank
+owner by this procedure.
 
 ## Phase 6: Next Phase Preview
 
@@ -255,11 +296,10 @@ Read next phase file and present:
 2. {task 2}
 ...
 
-**To start**: Run `continue-implementation` MCP command
-Phase {N+1} will NOT start automatically.
+**Next operation**: Follow the selected workflow mode below.
 ```
 
-**Do NOT** change next phase status, start tasks, or modify the phase file.
+The continue-implementation handoff owns activation of the next phase; accept-phase does not implement its tasks directly.
 
 If `Workflow Mode = autonomous`:
 1. Present the same preview for traceability.
@@ -269,9 +309,11 @@ If `Workflow Mode = autonomous`:
    - `workflow_mode=autonomous`
 3. Do not wait for a user message between phases.
 
+If `Workflow Mode = single_phase`, present the preview and stop after this phase is accepted. Do not activate or implement the next phase.
+
 ### If Final Phase
 
-All phases complete → inform user to run `complete-feature` to finalize.
+All phases complete → follow the selected completion boundary below.
 
 ---
 
@@ -279,6 +321,8 @@ If `Workflow Mode = autonomous`, immediately invoke `complete-feature` with:
 - `feature_id={{feature_id}}`
 - `feature_path=[resolved path if known]`
 - `workflow_mode=autonomous`
+
+If `Workflow Mode = single_phase`, stop after this phase is accepted and report that `complete-feature` is the next explicit action.
 
 ## Phase 7: Final Summary
 
@@ -298,16 +342,16 @@ If `Workflow Mode = autonomous`, immediately invoke `complete-feature` with:
 ---
 
 Workflow behavior:
-- Interactive/default: stop after acceptance and wait for the user to start the next command
-- `Workflow Mode = autonomous`: continue automatically to `continue-implementation` or `complete-feature` when all gates pass
-- Autonomous mode must never invent skip reasons or bypass failed gates
+- `Workflow Mode = autonomous` (default): continue automatically to `continue-implementation` or `complete-feature` when all gates pass.
+- `Workflow Mode = single_phase`: stop after this phase is accepted.
+- No mode may invent skip reasons, waive a failed gate, or treat a focused rerun as replacement evidence.
 
 ## Rules
 
 1. **Validate first** — check ALL requirements before accepting
 2. **User-centric** — never auto-start next phase
 3. **Git commits required** — both task tables AND Phase Summary
-4. **Code review required** — APPROVED status for code-relevant phases
+4. **Code review required** — APPROVED status when needCodeReview is true
 5. **Justify skips** — incomplete tasks need user-provided reasons
 6. **Update ALL files** — phase file, FeatureTasks.md, start-feature-report, checkpoint
 7. **Calculate metrics** — estimated vs actual with variance
@@ -338,5 +382,5 @@ Workflow behavior:
 ## Related Commands
 
 - **continue-implementation** — sets phase to AWAITING_USER_ACCEPTANCE before this runs
-- **code-review** — must be APPROVED before acceptance for code-relevant phases
+- **code-review** — must be APPROVED before acceptance when needCodeReview is true
 - **complete-feature** — run after all phases accepted to finalize feature
