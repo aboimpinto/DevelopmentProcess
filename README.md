@@ -146,7 +146,17 @@ Features flow through state folders in `MemoryBank/Features/`:
 |---------|---------|
 | `code-review` | Review all phase changes against CodeGuidelines. Returns APPROVED, APPROVED_WITH_NOTES, or NEEDS_CHANGES |
 | `accept-phase` | Validate all quality gates (build, tests, lint, code review, git commits) and mark a phase COMPLETED. Supports `workflow_mode=autonomous` to continue automatically |
-| `complete-feature` | Validate all phases done, compile lessons learned, move feature to `04_COMPLETED/`. Supports `workflow_mode=autonomous` to skip the extra lessons prompt |
+| `complete-feature` | Validate all phases done, compile lessons learned, retain every associated PR in the feature, update feature/parent epic with available merge evidence, reconcile all current epic status views, and move feature to `04_COMPLETED/`. Supports `workflow_mode=autonomous` to skip the extra lessons prompt |
+
+Deep-dive, refinement, start and completion reconcile an existing epic against feature
+records and evidence: statuses, counts, diagrams, delivery summaries and next
+steps. Obsolete progress snapshots move to linked history instead of leaving
+conflicting status tables in the current epic. Deep-dive records decisions without
+advancing implementation; refinement marks its target READY after its gate;
+successful start marks it IN_PROGRESS; verified completion marks it COMPLETED.
+Completed siblings are preserved. The epic completes only when all required
+features and epic-level acceptance/delivery gates are complete. No linked epic
+means N/A, not an instruction to create one.
 
 ## Typical Workflow
 

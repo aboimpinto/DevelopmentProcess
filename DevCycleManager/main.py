@@ -533,7 +533,7 @@ async def run_complete_feature(feature_id: str, feature_path: Optional[str] = No
     3. Verifies build and tests pass (0 errors, 0 warnings, 100% tests)
     4. Compiles Lessons Learned from all phases into feature-level document
     5. Asks user for additional lessons they want to highlight (or skips the prompt in autonomous workflow mode)
-    6. Updates all documentation with completion status
+    6. Updates feature and parent epic with completion status and available PR/merge evidence
     7. Creates completion reports (validation, metrics, lessons learned)
     8. Moves feature to 04_COMPLETED folder
     9. Creates completion git commit and pushes
@@ -558,6 +558,7 @@ async def run_complete_feature(feature_id: str, feature_path: Optional[str] = No
         "procedure_name": "complete-feature",
         "instructions": procedure,
         "context_folders": [
+            "{memory_bank}/Features/00_EPICS/",
             "{memory_bank}/Features/03_IN_PROGRESS/",
             "{memory_bank}/LessonsLearned/"
         ],
@@ -568,6 +569,8 @@ async def run_complete_feature(feature_id: str, feature_path: Optional[str] = No
             "feature-completion-report.md",
             "{memory_bank}/LessonsLearned/{feature_id}/Feature-Completion-LessonsLearned.md",
             "FeatureTasks.md updated with completion status",
+            "FeatureDescription.md updated with every associated PR and available merge evidence",
+            "Linked EpicDescription.md updated with completion and delivery references (if applicable)",
             "Feature folder moved to 04_COMPLETED/",
             "Git commit with completion details"
         ],

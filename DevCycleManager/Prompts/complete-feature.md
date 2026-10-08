@@ -38,12 +38,14 @@ This procedure is DONE when:
 - [ ] Git repository clean (no uncommitted/unpushed changes)
 - [ ] Build passes (0 errors, 0 warnings)
 - [ ] Tests pass (100%)
+- [ ] Every associated PR recorded in the feature, with available delivery evidence
 - [ ] Lessons Learned compiled from all phases
 - [ ] Additional lessons handled according to workflow mode
 - [ ] `feature-completion-report.md` created
 - [ ] FeatureTasks.md updated with completion section
 - [ ] Feature folder moved to `04_COMPLETED/`
-- [ ] Parent epic updated (if linked)
+- [ ] Parent epic updated with completion, delivery references and feature inventory link (if linked)
+- [ ] Whole epic checked for contradictory current statuses; obsolete snapshots moved to linked history
 - [ ] Completion git commit created and pushed
 
 ---
@@ -121,6 +123,40 @@ Run `git log origin/{branch}..HEAD --oneline`. If unpushed commits exist → rep
 ### 3.3 Record Branch Info
 
 Capture: branch name, last commit hash, total commits for this feature.
+
+### 3.4 Collect All PRs and Delivery Evidence
+
+Read the feature's PR inventory, task/phase records, completion notes and linked
+issue. When repository hosting access is available, cross-check associated PRs
+and their current state. Include **every associated PR**, not only the final or
+closing PR: task/phase deliveries, foundations, supporting fixes, and replaced
+or abandoned PRs. Preserve existing entries; distinguish superseded work from
+delivered work. Identify PRs by repository and number, not number alone.
+
+For each PR collect the available facts:
+
+| Field | Record |
+|-------|--------|
+| PR | Repository, number and clickable URL |
+| Purpose | Problem solved and contribution; associated task/phase IDs when known |
+| Role | Partial delivery, supporting change, completing delivery, or superseded |
+| State | Open/draft, merged, or closed without merge |
+| Merge evidence | Merge timestamp with timezone, target branch and merge commit SHA when available |
+| Verification | Source and observation date; distinguish live readback from saved evidence |
+
+Record linked feature issue state and parent checklist state when available.
+Do not infer merge from a closed PR, successful CI, a local commit or a closed
+issue. Keep PR head SHA, merge SHA and documentation completion commit distinct.
+Several PRs may jointly complete a feature; do not force one completing PR.
+
+If access or a field is unavailable, preserve dated evidence and mark the
+missing fact unavailable/unverified with the reason. Do not invent values,
+erase known PRs, or claim a live check succeeded. A project without PRs records
+N/A with its delivery method. Missing optional metadata alone is not a blocker;
+an unverified required merge/delivery condition remains a blocker. An open
+required delivery PR prevents completion; closed unmerged PRs need a documented
+replacement or scope disposition. This procedure records delivery; it does not
+authorize merging PRs or closing external issues merely to satisfy a checklist.
 
 ---
 
@@ -206,6 +242,7 @@ Save to feature folder as `feature-completion-report.md` containing:
 | Summary | Brief description of what was implemented |
 | Phase Completion | Status table for all phases |
 | Git Repository | Branch, final commit, clean status |
+| Delivery | Link to the complete PR inventory, completing PR(s), available merge evidence and issue state; identify unavailable or historical observations |
 | Build & Tests | 0 errors, 0 warnings, 100% tests |
 | Feature Metrics | Estimated vs actual time, task counts, review counts |
 | Deliverables | Code deliverables + documentation deliverables |
@@ -215,6 +252,21 @@ Save to feature folder as `feature-completion-report.md` containing:
 ### 6.2 Update FeatureTasks.md
 
 Append completion section: status COMPLETED, timestamp, total time with variance, final commit hash, destination path in `04_COMPLETED/`.
+
+### 6.3 Update FeatureDescription.md and Parent Epic
+
+Set the feature status and completion date. Maintain a single **Implementation
+PRs** inventory using the evidence from 3.4: every associated PR, purpose, role,
+state and available merge facts. Update existing entries without duplicates;
+never replace this inventory with just the final PR. Link it from the completion
+report and FeatureTasks.md. Preserve earlier dated history as history.
+
+For a linked parent epic, apply Phase 9's updates now, before the documentation
+commit/push, using the same delivery facts and final `04_COMPLETED/` paths.
+Record the feature's completion and available completing PR link(s), merge dates
+and merge SHAs, plus a link to its full PR inventory and completion report.
+The epic may summarize delivery; the feature must retain the exhaustive list.
+Standalone features record parent epic N/A without creating one.
 
 ---
 
@@ -269,18 +321,48 @@ git push origin {branch}
 
 ---
 
-## Phase 9: Update Parent Epic (If Linked)
+## Phase 9: Verify Parent Epic and Completion Records
 
-Check `Parent Epic` field in `FeatureDescription.md`. If linked (not "N/A"):
+Read back the updates prepared in 6.3 after the move. Check `Parent Epic` in
+`FeatureDescription.md`. If linked (not "N/A"):
 
 1. Find epic folder in `00_EPICS/{epic_id}-*/`
 2. Update Features Breakdown table → status `COMPLETED`
 3. Update Progress Tracking table → set Completed date
 4. Recalculate Epic Progress section (counts, progress bar percentage)
 5. Update Dependency Flow Diagram → node label with COMPLETED icon, class `completed`
-6. **Check if epic is fully complete**: if ALL features are COMPLETED → set Epic Status to `COMPLETED` with completion date
+6. Confirm a dated delivery summary identifies this feature as COMPLETED, lists
+   the available completing PR link(s), merge timestamps and merge SHAs, and links
+   to the feature's complete PR inventory and completion report.
+7. **Check if epic is fully complete**: mark it COMPLETED only when all features
+   and any epic-level acceptance/delivery requirements are complete. Otherwise
+   retain the appropriate incomplete status and name the remaining work.
 
 If no parent epic → skip.
+
+Verify feature status, PR inventory, report, epic tables/counts and current links
+agree. Repeated execution must update existing records rather than duplicate
+entries. Read each linked feature's current description, lifecycle location and
+relevant validation/delivery evidence before recalculating counts from distinct
+feature IDs. Resolve disagreement from evidence; do not blindly trust a folder
+name, old table or latest paragraph, and do not change unrelated feature states.
+
+Read the whole epic, including its top-level status, Features Breakdown, Progress
+Tracking, counts/percentage, diagram, delivery summary and next steps. All current
+views must agree. Move obsolete lifecycle snapshots, status tables and superseded
+progress prose to a linked history record with original dates/evidence preserved.
+Do not leave contradictory READY/IN_PROGRESS/COMPLETED views in the main epic
+merely labeled "historical", or rewrite old history to pretend it was current.
+Retain design decisions and preserve the complete feature PR inventory. Report
+any unresolved evidence conflict instead of claiming consistency. Record the
+readback outcome in the completion report; repeated runs must not duplicate
+status views or history entries.
+
+Ensure any corrections
+made during readback are included in the documentation commit/push. Follow the
+project's MemoryBank location and Git policy: an external non-Git MemoryBank
+uses a filesystem move and records commit/push N/A, without copying it into the
+source repository or manufacturing an empty source commit.
 
 ---
 
@@ -293,6 +375,7 @@ Present to user:
 - Final metrics table (phases, tasks, time, variance, reviews, coverage)
 - Documentation created (completion report path, lessons learned path)
 - Epic status (if linked: epic progress, whether epic is now complete)
+- Link to the feature's full PR inventory and summarize verified merge evidence and unavailable fields
 - Next steps: close external ticket, update project docs, continue next feature or epic
 
 ---
