@@ -37,6 +37,7 @@ This procedure is DONE when:
 - [ ] User confirms nothing else to add
 - [ ] Spec file updated with new sections appended (existing content preserved)
 - [ ] Summary of changes presented
+- [ ] Existing epic reconciled with feature states and current decisions; obsolete snapshots archived
 
 ---
 
@@ -240,7 +241,10 @@ If no, proceed.
 
 ### 5.2 Update the Spec File
 
-Append new sections at the end of the file (before any footer/metadata). Preserve ALL existing content.
+Update the relevant existing sections with confirmed decisions; add sections
+only for new topics. Preserve evidence and decision history, moving superseded
+status snapshots and resolved questions into linked history instead of leaving
+contradictory statements in the current specification.
 
 **Formatting rules:**
 - Create specific section names based on what was discussed (e.g., "### Authentication Flow Details" not "### Technical Details")
@@ -249,7 +253,33 @@ Append new sections at the end of the file (before any footer/metadata). Preserv
 - Include a "Related Documents" section if any were referenced
 - Use `##` for major sections, `###` for subsections
 
-### 5.3 Present Summary
+### 5.3 Reconcile the Existing Epic
+
+If the target is an epic, reconcile that epic. If it is a feature or phase,
+follow its feature's Parent Epic link. If none exists, record N/A; do not create
+an epic or invent a relationship. For other document types, reconcile only an
+explicitly linked epic affected by the confirmed decisions.
+
+Update the epic's scope, decisions, dependencies and applicable feature entries
+from the confirmed interview. Read the linked feature descriptions, lifecycle
+locations and relevant validation/delivery evidence. Reconcile the epic header,
+Features Breakdown, Progress Tracking, distinct-feature counts/percentage,
+diagram, delivery summary and next steps against that evidence. Preserve all PR
+references and completed siblings; report unresolved evidence conflicts rather
+than asserting consistency. Mark interview completion separately from feature
+or epic delivery. A completed deep-dive does not itself make a feature READY,
+IN_PROGRESS or COMPLETED, execute acceptance, or authorize new implementation.
+
+Keep a single consistent current view. Archive obsolete lifecycle snapshots and
+superseded progress prose with their original dates/evidence and a history link;
+a "historical" heading beside conflicting current statuses is insufficient.
+Read back the whole epic before reporting success, and include the consistency
+result in the summary. On an interrupted interview, save confirmed decisions
+and its incomplete status, reconcile affected records without advancing the
+lifecycle, and identify any unresolved scope/status conflict. Repeat runs update
+existing records without duplicate snapshots or invented dates/results.
+
+### 5.4 Present Summary
 
 ```
 Deep Dive Complete
@@ -267,6 +297,9 @@ Items Marked for Validation:
 
 Referenced Documents:
 - {any referenced documents}
+
+Epic Consistency:
+- {epic ID and current state; readback result or N/A}
 ```
 
 ---

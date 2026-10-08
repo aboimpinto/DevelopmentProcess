@@ -49,7 +49,7 @@ This procedure is DONE when:
 - [ ] Shared readiness gate R1–R6 passed; evidence saved in `readiness-validation.md`
 - [ ] Feature moved from `01_SUBMITTED` to `02_READY_TO_DEVELOP`
 - [ ] FeatureDescription.md updated with state tracking
-- [ ] Parent epic updated to READY status (if linked)
+- [ ] Refined feature's epic entry updated to READY; all current epic views reconciled (if linked)
 - [ ] Completion summary presented
 
 ---
@@ -700,7 +700,9 @@ finished feature, task, phase, contract, and acceptance documents. Repair gaps
 within the agreed scope, including missing tracking/checkpoint templates, and
 revalidate. Save `readiness-validation.md` with evidence and a final verdict.
 Only PASS permits Phase 5. On BLOCKED, preserve the folder and mark readiness
-blocked; explain the exact remaining decision instead of claiming completion.
+blocked; reconcile the parent epic against that actual outcome using Phase 6,
+without marking the feature READY. Explain the exact remaining decision instead
+of claiming completion.
 
 ---
 
@@ -740,6 +742,31 @@ Check the `Parent Epic` field in `FeatureDescription.md`.
 | Epic Progress section | Recalculate counts, move feature to Ready row |
 | Dependency Flow Diagram | Node label → `FEAT-XXX[FEAT-XXX: Title]`, class → `ready` |
 
+These READY changes apply only to the refined feature after its gate passes,
+not to the entire epic or other features. On blocked refinement, report the
+actual lifecycle state and readiness blocker instead. Do not downgrade completed
+siblings or infer implementation/test completion from a readiness result.
+
+Before reporting success, read every linked feature's current description,
+lifecycle location and relevant validation/delivery evidence. Resolve conflicts
+from evidence, not the newest paragraph or folder name alone. Recalculate counts
+from distinct feature IDs; a refinement must not change unrelated feature states.
+
+Read back the **whole epic**, not only the edited table. Its top-level status,
+Features Breakdown, Progress Tracking, totals/percentage, diagram, delivery
+summary and next steps must agree with the same current feature states. Update
+existing entries and moved links; do not append another competing status view.
+Keep epic-level acceptance separate from feature completion.
+
+Move obsolete lifecycle snapshots, status tables and superseded progress prose
+to a linked history record, preserving their dates and evidence. A "historical"
+heading alone is insufficient when the main epic still presents conflicting
+READY/IN_PROGRESS/COMPLETED views. Keep the epic a current reference; preserve
+design decisions without displaying outdated progress as current information.
+If evidence cannot resolve a conflict, identify it and do not claim consistency.
+Record this readback result in the refinement report. A second run must update
+the same views without duplicating history or resetting sibling states.
+
 ---
 
 ## Phase 7: Confirm Completion
@@ -770,9 +797,10 @@ Time Estimates:
 
 [If linked to epic]
 Epic Updated: [EPIC-XXX]
-   - Status changed to: READY
+   - Refined feature entry changed to: READY (epic status derived separately)
    - Progress Tracking updated
    - Dependency Diagram updated
+   - Whole-document consistency verified; obsolete status snapshots archived
 
 Next Steps:
    1. Review the phase breakdown

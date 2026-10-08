@@ -39,7 +39,7 @@ This procedure is DONE when:
 - [ ] Git branch created: `feat/{{feature_id}}-{slug}`
 - [ ] Feature folder moved to `03_IN_PROGRESS/`
 - [ ] FeatureDescription.md updated with state change
-- [ ] Parent epic updated (if linked)
+- [ ] Parent epic updated and all current status views reconciled (if linked)
 - [ ] Git commit created with validation summary
 - [ ] Success report saved as `start-feature-report-{timestamp}.md`
 - [ ] If `Workflow Mode = autonomous`, handoff to `continue-implementation` initiated with the same workflow mode
@@ -202,6 +202,29 @@ Check `Parent Epic` field in `FeatureDescription.md`. If linked (not "N/A"):
 6. Set Epic Status to `IN_PROGRESS` if not already
 
 If no parent epic → skip.
+
+Only a successful start changes the target feature to IN_PROGRESS and records
+its actual start date. Validate the feature description, lifecycle location and
+start evidence together; do not infer a successful start from the tool call.
+On rejected validation or a failed move, record the actual state/blocker and
+reconcile any affected epic entry without falsely marking implementation started.
+
+Read every linked feature's current description, lifecycle location and relevant
+validation/delivery evidence before recalculating counts from distinct IDs.
+Keep completed siblings completed; do not reset other features because this one
+started. The epic is IN_PROGRESS after a successful feature start; completion
+requires all required features and epic acceptance/delivery gates, not merely
+one closed feature or PR.
+
+Read back the entire epic: header, Features Breakdown, Progress Tracking,
+counts/percentage, diagram, delivery summary and next steps must agree. Update
+existing rows and moved links instead of appending competing status snapshots.
+Archive obsolete lifecycle tables/progress prose to linked history with original
+dates/evidence preserved; a historical heading alone does not resolve conflicting
+statuses in the current epic. Preserve all PR references and design decisions.
+Report unresolved evidence conflicts instead of claiming consistency. Include
+the readback result in the start report; repeat runs must not duplicate entries,
+change original start dates or advance unrelated features.
 
 ---
 
