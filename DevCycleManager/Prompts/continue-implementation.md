@@ -43,7 +43,7 @@ This procedure is DONE when:
 - [ ] All tasks in current phase implemented following Gherkin specs
 - [ ] Each task status maintained in real time (PENDING -> IN_PROGRESS -> COMPLETED/SKIPPED)
 - [ ] Required context documents read in order at each task start/resume
-- [ ] Later phases reuse `planning-analysis-report.md` instead of creating new per-phase planning files
+- [ ] Tasks declaring `planning-analysis-report.md` as input reuse it instead of creating new per-phase planning files
 - [ ] Downstream phase/feature dependencies reflected in implementation and test strategy
 - [ ] Git commits tracked in both task-level and phase-level tables
 - [ ] Build: 0 errors, 0 warnings

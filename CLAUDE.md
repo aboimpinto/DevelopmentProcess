@@ -422,11 +422,11 @@ LLM: Invokes start-feature with feature_id="FEAT-001"
 
 **What It Does**:
 - Identifies current state (which phase, which task)
-- During Phase 1, creates or refreshes the canonical feature-level planning document: `planning-analysis-report.md`
+- Tasks explicitly assigned to planning create or refresh the canonical feature-level document: `planning-analysis-report.md`
 - Reads linked epic documents, baselines, related features, and completed feature history to understand dependencies and reuse
 - For each task:
   - Gathers task context and requirements
-  - Reads `planning-analysis-report.md` in Phases 2-8 instead of re-doing phase planning
+  - Reads `planning-analysis-report.md` when the task declares it as an input, instead of re-doing planning
   - Accounts for what is already done and what downstream phases/features will depend on
   - Guides implementation following Gherkin specs
   - Runs build and tests, including downstream-aware regression/contract coverage when needed
@@ -435,7 +435,7 @@ LLM: Invokes start-feature with feature_id="FEAT-001"
 - At phase completion:
   - Validates all git commits are tracked
   - Runs build, tests, and lint
-  - **Invokes `code-review` MCP command** (for code-relevant phases)
+  - **Invokes `code-review` MCP command** when the declared `needCodeReview` flag is true
   - Creates LessonsLearned document
   - Sets phase to AWAITING_USER_ACCEPTANCE
 - In `workflow_mode="autonomous"`, auto-invokes `accept-phase` and continues until `complete-feature`
@@ -477,15 +477,13 @@ LLM: Invokes continue-implementation with feature_id="FEAT-001"
 - Saves report to `code-reviews/phase-{N}/Code-Review-{timestamp}-{STATUS}.md`
 - Updates **Code Review History** table in phase checkpoint
 
-**Phases Requiring Code Review**:
-- Phase 3 (Business Logic) - ALWAYS
-- Phase 4 (Presentation Logic) - ALWAYS
-- Phase 5 (User Interface) - ALWAYS
-- Phase 2, 6, 7 - If contains significant code
-
-**Phases That Skip Code Review**:
-- Phase 0, 1, 8 (no code changes)
-- Phases with only DTOs, config, or documentation
+**Declared Review and Coverage Gates**:
+- Require code review when `needCodeReview` is true; otherwise record justified N/A.
+- Assess meaningful acceptance coverage when `needTestCoverage` is true.
+- The flags are independent; all four combinations are valid.
+- Explicitly required build, lint and test commands still apply when both flags are false.
+- Phase numbers, positions, titles and file categories do not select gates.
+- `start-feature` performs setup and joins the same execution loop as `continue-implementation`.
 
 **Example**:
 ```

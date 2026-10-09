@@ -536,7 +536,7 @@ async def run_continue_implementation(feature_id: str, feature_path: Optional[st
     The Recipe for continuing feature implementation.
     Orchestrates the systematic implementation of an IN_PROGRESS feature:
     1. Discovers current state (feature, phase, task)
-    2. Creates/refines the canonical Phase 1 planning document using feature, epic, and dependency context
+    2. Creates/refines the canonical planning document when assigned by a task, using feature, epic, and dependency context
     3. Executes tasks following specifications
     4. Manages quality (build, tests, code-review)
     5. Tracks progress (update phase files, FeatureTasks.md)
@@ -582,7 +582,7 @@ async def run_continue_implementation(feature_id: str, feature_path: Optional[st
         "outputs": [
             "Phase updates in Phases/*.md",
             "FeatureTasks.md updates",
-            "planning-analysis-report.md (canonical Phase 1 planning artifact)",
+            "planning-analysis-report.md (canonical feature-level artifact produced by its assigned planning task)",
             "PRDelivery.md (phase decision, unit branches, PR state and evidence)",
             "code-reviews/phase-{N}/*.md",
             "LessonsLearned/{feature_id}/Phase-{N}-{name}.md",
@@ -1030,7 +1030,7 @@ async def json_rpc_handler(request: JsonRpcRequest):
                 },
                 {
                     "name": "continue-implementation",
-                    "description": "Returns operations for the calling coding agent to execute locally. Continue implementing an IN_PROGRESS feature. Phase 1 creates or refreshes the canonical `planning-analysis-report.md` using feature, epic, and dependency context; later phases must read and reuse it instead of re-planning. Also orchestrates task execution, quality gates (build/test/review), downstream-aware test coverage, phase completion, and LessonsLearned documents. With `workflow_mode=autonomous`, it continues through code review, phase acceptance, next phases, and final completion without routine user interaction.",
+                    "description": "Returns operations for the calling coding agent to execute locally. Continue implementing an IN_PROGRESS feature. Tasks assigned to planning create or refresh the canonical `planning-analysis-report.md` using feature, epic, and dependency context; tasks declaring it as an input read and reuse it. One shared execution loop follows declared tasks and independent needCodeReview/needTestCoverage flags; phase numbers, positions and titles do not select work or gates. Also orchestrates task execution, quality gates (build/test/review), downstream-aware test coverage, phase completion, and LessonsLearned documents. With `workflow_mode=autonomous`, it continues through code review, phase acceptance, next phases, and final completion without routine user interaction.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {

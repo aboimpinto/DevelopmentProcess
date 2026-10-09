@@ -160,7 +160,7 @@ Features flow through state folders in `MemoryBank/Features/`:
 |---------|---------|
 | `refine-feature` | Transform a feature into a phased implementation plan using the full feature folder plus linked epic/dependency context (9 phases, tasks with Gherkin specs). Moves to `02_READY_TO_DEVELOP/` |
 | `start-feature` | Validate documentation, create git branch, move to `03_IN_PROGRESS/`. Rejects if docs are incomplete or ambiguous. Supports `workflow_mode=autonomous` for official no-routine-prompt execution |
-| `continue-implementation` | Orchestrate task-by-task implementation using feature history plus linked epic/dependency context; Phase 1 creates canonical `planning-analysis-report.md`, later phases reuse it; build, downstream-aware tests, commit tracking, code review, lessons learned. Supports `workflow_mode=autonomous` to continue through acceptance and completion |
+| `continue-implementation` | Orchestrate task-by-task implementation using feature history plus linked epic/dependency context; assigned planning tasks create canonical `planning-analysis-report.md`; tasks declaring it as input reuse it; one shared execution loop uses declared work and independent `needCodeReview`/`needTestCoverage` flags, regardless of phase number, position or title; build, downstream-aware tests, commit tracking, code review, lessons learned. Supports `workflow_mode=autonomous` to continue through acceptance and completion |
 
 ### Quality and Completion
 
