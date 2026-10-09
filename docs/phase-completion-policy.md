@@ -203,3 +203,37 @@ independent flag combinations for applicable production/mixed scopes. Record sco
 corrections and stable task/criterion transfers in every affected projection;
 retain failed evidence and unresolved obligations under the new owner. Moving a
 task or disabling an inapplicable gate does not establish completion.
+
+
+## Adaptive phase structure and mandatory responsibilities
+
+The [Adaptive Feature Phase Planning policy](../DevCycleManager/Prompts/feature-phase-planning-policy.md)
+defines three mandatory separate phases: Initial Checkpoint, Planning and Final
+Checkpoint. Initial Checkpoint comes first, Planning follows its green baseline,
+feature-specific work follows Planning, and Final Checkpoint closes the integrated
+result. Select implementation phases from deliverables and dependencies; omit
+empty layers instead of producing N/A phases. Compute all counts and progress from
+the actual list. Record explicit roles in phase documents and FeatureTasks.md;
+the strict phase.gates JSON envelope and its independent flags are unchanged.
+
+Refinement declares the responsibilities as tasks and check references without
+executing product commands. Initial Checkpoint executes the project build with
+zero errors/warnings, configured clean lint and all required tests. Failures must
+be repaired with explicit task ownership and applicable gates before Planning or
+feature implementation; do not defer prerequisite repair behind that baseline.
+Planning inspects actual code and records how to implement: exact affected files
+and moves, patterns/coding guidelines, lessons learned, dependencies and verification.
+It can revise the proposed implementation structure while preserving accepted
+scope, stable references, actual delivery links and valid evidence.
+
+Final Checkpoint requires fresh build/test verification after implementation and
+required integration/merges. Both flags false does not waive these commands.
+Reuse valid reviews/coverage for unchanged scope, and let feature completion reuse
+the final execution evidence when relevant inputs remain unchanged. Changed source,
+tests, configuration, dependencies or environment invalidate affected checks.
+An initial green baseline or focused development run is not final verification.
+
+Required roles cannot be skipped. Reconcile existing active features at the next
+authorized boundary from actual content, not phase names/numbers. Preserve IDs and
+evidence; record missing historical baseline proof rather than inventing it.
+This remains one declared-task execution process, not one executor per role.

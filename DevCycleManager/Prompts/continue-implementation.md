@@ -153,7 +153,15 @@ From project documentation, identify build, test, and lint commands.
 
 ## Phase 2: State Detection
 
-After workspace preflight/recovery classification, read `FeatureTasks.md` and the current phase file to determine entry point. No table entry bypasses that check:
+After workspace preflight/recovery classification, reconcile the actual phase list,
+roles, dependencies and evidence under Adaptive Feature Phase Planning. Derive the
+current/next phase from that list, not fixed numbers. Initial Checkpoint must pass
+before Planning; the technical plan must be ready before feature implementation;
+Final Checkpoint verifies the integrated result. Each uses this same execution
+loop and its declared tasks/checks. Reconcile legacy plans without inventing
+historical baseline evidence.
+
+Read `FeatureTasks.md` and the current phase file to determine entry point. No table entry bypasses that check:
 
 | Entry Point | Detection | Action |
 |-------------|-----------|--------|
@@ -338,7 +346,10 @@ Create or update the feature-root file `planning-analysis-report.md` with:
 - Parent epic context and baseline constraints (if linked)
 - Upstream/downstream dependency map across related features
 - Implementation type distribution table
-- Key patterns identified with sources
+- Exact file changes, including old/new paths for moves and create/modify/delete actions
+- Key patterns identified with coding-guideline and example-file sources
+- Relevant lessons learned, prior traps and how this approach avoids them
+- Validated implementation phase structure and any recorded task/dependency revisions
 - Phase-by-phase implementation guidance table
 - Downstream dependency obligations table for later phases/features
 - Test strategy for current work, regression coverage, and reusable contracts/artifacts
@@ -572,7 +583,7 @@ Verify ALL commits documented:
 
 ### 5.2 Evaluate Declared Quality Gates
 
-Read the phase.gates record and ordered task contract. Reuse passing evidence for unchanged inputs. Execute only missing, invalidated or explicitly fresh required checks. The following rows are examples to populate from declared commands, not universal obligations; include each assigned test boundary and any explicit health checks. Assess acceptance coverage when needTestCoverage is true.
+Read the phase.gates record and ordered task contract. Reuse passing evidence for unchanged inputs. Execute only missing, invalidated or explicitly fresh required checks. The Initial Checkpoint requires actual baseline execution before feature work; the Final Checkpoint explicitly requires fresh full project verification after implementation. Neither can be satisfied by focused development runs or report rewrites. The following rows are examples to populate from declared commands, not universal obligations; include each assigned test boundary and any explicit health checks. Assess acceptance coverage when needTestCoverage is true.
 
 | Gate | Command | Expected |
 |------|---------|----------|

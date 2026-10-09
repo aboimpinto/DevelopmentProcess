@@ -11,7 +11,7 @@ purpose: Transform a submitted feature into a phased implementation plan with te
 tools: Read, Write, Glob, AskUserQuestion
 triggers: User wants to break a feature into development phases and tasks
 inputs: feature_id, feature_path (optional)
-outputs: FeatureTasks.md, PRDelivery.md, Phases/ folder with phase-0 through phase-8 files, feature moved to 02_READY_TO_DEVELOP
+outputs: FeatureTasks.md, PRDelivery.md, Phases/ folder with required checkpoint/planning roles and feature-specific implementation phases, feature moved to 02_READY_TO_DEVELOP
 related: design-feature, start-feature, deep-dive
 -->
 
@@ -93,7 +93,7 @@ This procedure is DONE when:
 - [ ] Feature and epic acceptance tests/baselines are fully refinable into phase tasks and unit/integration tests
 - [ ] Reusable upstream artifacts and required downstream-facing artifacts/tests identified
 - [ ] Missing edge-case tests identified and planned
-- [ ] `Phases/` folder created with phase-0 through phase-8 files
+- [ ] `Phases/` contains Initial Checkpoint, Planning, relevant implementation phases and Final Checkpoint, with explicit roles and no empty layer placeholders
 - [ ] `FeatureTasks.md` created with phase summary, tech stack, build config
 - [ ] Project policy resolved; PRDelivery.md covers tasks, candidate units and dependencies
 - [ ] Non-feature delivery has proposed PR titles/descriptions and per-phase/total counts, with no double counting; forecast assumptions recorded
@@ -332,21 +332,31 @@ Before writing phase files, create a concise planning summary for yourself cover
 
 Create a `Phases/` folder in the feature directory. Generate individual phase files using the template below.
 
-### Illustrative Phase Structure
+### Adaptive Phase Structure
 
-| Phase | Name | Purpose | Depends On |
-|-------|------|---------|------------|
-| 0 | Health Check | Verify build/tests before starting | - |
-| 1 | Planning & Analysis | Finalize technical approach | Phase 0 |
-| 2 | Data Layer | Models, DTOs, schemas, contracts, database entities | Phase 1 |
-| 3 | Business Logic | Services, state management, domain rules, APIs | Phase 2 |
-| 4 | Presentation Logic | Controllers, presenters, view-models, handlers | Phase 3 |
-| 5 | User Interface | Views, components, templates, screens | Phase 4 |
-| 6 | Integration | Wire everything together, routing, DI | Phase 5 |
-| 7 | Testing & Polish | End-to-end tests, refinements | Phase 6 |
-| 8 | Final Checkpoint | Complete verification | Phase 7 |
+Apply the shared Adaptive Feature Phase Planning policy. Include these roles in
+order and explain the selected implementation structure:
 
-This table is an example, not a required topology. Choose phases, ordering, tasks and dependencies from accepted scope. Omit work already provided by dependencies. Neither these labels nor their positions define gate flags. Predict needCodeReview and needTestCoverage independently for each phase and publish its exact configured checks.
+| Role | Phase | Required outcome |
+|------|-------|------------------|
+| initial_checkpoint | Initial Checkpoint | Verified baseline: zero build errors/warnings, clean configured lint, all required tests green |
+| planning | Planning | Technical approach, exact affected files/moves, coding patterns and lessons learned in planning-analysis-report.md |
+| implementation | Feature-specific phase(s) | Actual accepted deliverables, ordered by dependencies, with explicit checks and independent gate flags |
+| final_checkpoint | Final Checkpoint | Fresh verification of the final integrated source and required acceptance evidence |
+
+The implementation row expands to only the phases with real work. A file-move
+refactor could use Move Modules and Update Consumers; a backend feature could use
+Implement Contracts and Verify Integration. Do not create UI, data-layer or other
+empty phases merely to mark them N/A. A small change may have one implementation
+phase. Planning-only deliverables must not invent product implementation work.
+Keep the three mandatory roles and generate all counts/links from the selected
+list. Record each phase's rationale, dependencies and criterion ownership.
+
+Refinement proposes the structure from static repository evidence. The mandatory
+Planning phase later validates the technical how after the baseline succeeds and
+revises affected tasks/dependencies without discarding accepted work or evidence.
+Refinement declares baseline and final checks without executing them or claiming
+that they passed. Full checkpoint checks remain required even with both flags false.
 
 Phase-planning requirements:
 - Assign clean entry and clean exit verification to the initial checkpoint, together with checkout identity, startup-change reconciliation and declared check-output cleanup. Apply the shared **Workspace entry, recovery and clean handoffs** contract; do not defer first inspection to a later planning or code phase.
@@ -354,7 +364,7 @@ Phase-planning requirements:
 - When reassigning an interrupted task, reconcile its existing files and saved snapshots as well as its ledger and failed evidence. Record the owning task, exact backup/stash identity and restoration point before retry; do not create a circular dependency where one phase needs cleanliness but a later phase owns the unexplained dirty files.
 - Verify and correct epic feature order under Required Dependency Order. Schedule
   enabling infrastructure/startup tasks before consumer tasks, even when this
-  differs from the default phase table.
+  differs from a familiar layered implementation sequence.
 - When upstream features already provide needed artifacts, create tasks to integrate/extend them instead of recreating them.
 - When this feature introduces artifacts that downstream features will use, include explicit tasks and tests for stable contracts, regression safety, and handoff notes.
 - Use feature-level and epic-level acceptance baselines to drive both implementation tasks and test tasks.
@@ -366,7 +376,8 @@ Phase-planning requirements:
 # Phase [N]: [Phase Name]
 
 **Status**: PENDING
-**Depends On**: Phase [N-1] (if applicable)
+**Phase Role**: [initial_checkpoint | planning | implementation | final_checkpoint]
+**Depends On**: [Actual prerequisite phase IDs; do not infer from N-1]
 **PR Boundary**: undecided
 **PR Decision Basis**: [Candidate grouping and PRDelivery.md reference; evaluate at entry]
 **Estimated Time (Man/Hour)**: [X]h
@@ -384,9 +395,9 @@ Phase-planning requirements:
 ---
 
 ## Pre-Phase Checklist
-- [ ] Previous phase completed (if applicable)
-- [ ] Build passing: `[PROJECT_BUILD_COMMAND]` → 0 errors, 0 warnings
-- [ ] Tests passing: `[PROJECT_TEST_COMMAND]` → 100% green
+- [ ] Declared prerequisite phases/tasks completed
+- [ ] Required entry evidence verified using declared check IDs
+- [ ] Baseline is green before Planning or feature implementation; the Initial Checkpoint itself produces that evidence
 - [ ] No unresolved blockers
 
 ---
@@ -689,9 +700,10 @@ Create `FeatureTasks.md` in the feature folder:
 
 Record command definitions in FeatureDescription.md `## TestPlan` using the injected
 project-test-plan-authoring/v1 policy. This section links to the check IDs; it does
-not repeat executable placeholders or supply technology defaults. Build and lint
-retain their observed diagnostics as advisory findings. Required tests and review
-follow the independent phase declarations.
+not repeat executable placeholders or supply technology defaults. Required build and configured lint checks must have zero errors and warnings;
+required test suites must pass. Declare baseline and fresh final executions in
+their checkpoint verification references. Review and coverage follow the
+independent phase flags; those flags do not waive required command execution.
 
 ### Missing Project Configuration
 
@@ -705,38 +717,33 @@ within authority. Ask the user only for a real architecture/intent/authority gap
 
 ## Phase Summary
 
-| Phase | Name | Est. Man/Hour | Est. AI/Hour | Status | Actual Man | Actual AI | Details |
-|-------|------|---------------|--------------|--------|------------|-----------|---------|
-| 0 | Health Check | 0.5h | 0h | PENDING | - | - | [Link](Phases/phase-0-health-check.md) |
-| 1 | Planning & Analysis | 2h | 1h | PENDING | - | - | [Link](Phases/phase-1-planning-analysis.md) |
-| 2 | Data Layer | 3h | 1h | PENDING | - | - | [Link](Phases/phase-2-data-layer.md) |
-| 3 | Business Logic | 4h | 2h | PENDING | - | - | [Link](Phases/phase-3-business-logic.md) |
-| 4 | Presentation Logic | 3h | 1.5h | PENDING | - | - | [Link](Phases/phase-4-presentation-logic.md) |
-| 5 | User Interface | 4h | 2h | PENDING | - | - | [Link](Phases/phase-5-user-interface.md) |
-| 6 | Integration | 2h | 1h | PENDING | - | - | [Link](Phases/phase-6-integration.md) |
-| 7 | Testing & Polish | 3h | 1.5h | PENDING | - | - | [Link](Phases/phase-7-testing-polish.md) |
-| 8 | Final Checkpoint | 1h | 0.5h | PENDING | - | - | [Link](Phases/phase-8-final-checkpoint.md) |
+Generate one row for each actual phase, including all three mandatory roles.
+Use real estimates and links; this row is a template, not a fixed phase list:
+
+| Phase | Role | Name | Depends On | Est. Man/Hour | Est. AI/Hour | Status | Actual Man | Actual AI | Details |
+|-------|------|------|------------|--------------|-------------|--------|------------|-----------|---------|
+| [Stable ID] | [Declared role] | [Name] | [Prerequisite IDs] | [X]h | [Y]h | PENDING | - | - | [Link](Phases/[actual-phase-file].md) |
+
+**Structure Rationale**: [Why these implementation boundaries fit the accepted work; map every criterion to its owner.]
 
 **Total Estimated**: [X]h (Man) + [Y]h (AI) = **[Total]h**
-**Total Actual**: 0h (Man) + 0h (AI) = **0h**
+**Total Actual**: [Preserved actual totals; zero for a new plan]
 
 ---
 
 ## Progress Tracking
 
-**Current Phase**: Phase 0 - Health Check
-**Completed Phases**: 0/9
-**Completion**: 0%
+**Current Phase**: [Actual current phase ID; Initial Checkpoint for a new plan]
+**Completed Phases**: [completed phase count]/[actual phase count]
+**Completion**: [Computed from the actual phase list; zero for a new plan]
 
 ---
 
 ## Key Files to Create/Modify
 
-| File | Action | Phase |
-|------|--------|-------|
-| [File 1] | Create | Phase 2 |
-| [File 2] | Create | Phase 3 |
-| [File 3] | Modify | Phase 4 |
+| File / Old → New Path | Action | Owning Phase/Task |
+|-----------------------|--------|------------------|
+| [Actual path(s)] | [Create/Modify/Move/Delete] | [Declared owner] |
 
 ---
 
@@ -803,7 +810,7 @@ of claiming completion.
 
 **Current State**: 02_READY_TO_DEVELOP
 **Last State Change**: [Date]
-**Phase Progress**: 0/9 phases completed
+**Phase Progress**: [completed phase count]/[actual phase count] phases completed
 
 ### State History
 | Date | From State | To State | Action |
@@ -867,15 +874,7 @@ Feature Location: {MEMORY_BANK_PATH}/Features/02_READY_TO_DEVELOP/[feature-folde
 
 Documents Created:
    - FeatureTasks.md - Task summary with phase links
-   - Phases/phase-0-health-check.md
-   - Phases/phase-1-planning-analysis.md
-   - Phases/phase-2-data-layer.md
-   - Phases/phase-3-business-logic.md
-   - Phases/phase-4-presentation-logic.md
-   - Phases/phase-5-user-interface.md
-   - Phases/phase-6-integration.md
-   - Phases/phase-7-testing-polish.md
-   - Phases/phase-8-final-checkpoint.md
+   - Phases/[actual-phase-file].md - List each generated file, role and dependencies
    - PRDelivery.md - Project policy, task coverage, proposed PR titles/descriptions and dependencies
 
 PR Forecast:

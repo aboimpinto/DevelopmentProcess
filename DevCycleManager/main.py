@@ -52,6 +52,7 @@ FEATURE_WORKFLOW_MODES = ("autonomous", "single_phase")
 ACCEPTANCE_POLICY_VERSION = "acceptance-responsibility/v1"
 ACCEPTANCE_POLICY_TOOLS = frozenset(("submit-epic", "submit-feature", "create-epic-features", "link-feature-to-epic", "design-feature", "deep-dive", "refine-feature", "start-feature", "continue-implementation", "code-review", "accept-phase", "complete-feature"))
 QUALITY_GATE_POLICY_VERSION = "devcycle-phase-quality/v2"
+FEATURE_PHASE_POLICY_VERSION = "devcycle-feature-phases/v1"
 QUALITY_GATE_TOOLS = frozenset(("refine-feature", "start-feature", "continue-implementation",
                                "code-review", "accept-phase", "complete-feature"))
 
@@ -424,8 +425,8 @@ async def run_refine_feature(feature_id: str, feature_path: Optional[str] = None
     The Recipe for refining a feature into implementable tasks.
     Transforms a feature from 01_SUBMITTED to 02_READY_TO_DEVELOP by:
     1. Analyzing all feature-folder documents plus linked epic/dependency context
-    2. Creating phased implementation plan
-    3. Breaking down into independent tasks with unit tests
+    2. Creating an adaptive phase plan with mandatory checkpoint and planning roles
+    3. Breaking down into tasks with independently declared verification
     4. Adding checkpoints with quality gates
     """
     # Load the procedure template
@@ -466,18 +467,10 @@ async def run_refine_feature(feature_id: str, feature_path: Optional[str] = None
             "FeatureTasks.md",
             "readiness-validation.md",
             "ImplementationContract.md (when applicable)",
-            "Phases/phase-0-health-check.md",
-            "Phases/phase-1-planning-analysis.md",
-            "Phases/phase-2-data-layer.md",
-            "Phases/phase-3-business-logic.md",
-            "Phases/phase-4-presentation-logic.md",
-            "Phases/phase-5-user-interface.md",
-            "Phases/phase-6-integration.md",
-            "Phases/phase-7-testing-polish.md",
-            "Phases/phase-8-final-checkpoint.md",
+            "Phases/*.md (Initial Checkpoint, Planning, feature-specific implementation phases, Final Checkpoint)",
             "PRDelivery.md (project policy, proposed PR titles/descriptions, per-phase forecast and dependencies)"
         ],
-        "message": "Execute the refine-feature procedure. Read the full feature folder plus any linked epic/dependency context, then create a phased implementation plan with tasks, unit tests, and quality checkpoints. Execute the included shared readiness gate and save readiness-validation.md before declaring READY or moving to 02_READY_TO_DEVELOP."
+        "message": "Execute the refine-feature procedure. Read the full feature folder plus any linked epic/dependency context, then create an adaptive phase plan with mandatory Initial Checkpoint, Planning and Final Checkpoint roles, only relevant implementation phases, and independently declared checks/review/coverage. Execute the included shared readiness gate and save readiness-validation.md before declaring READY or moving to 02_READY_TO_DEVELOP."
     }
 
 async def run_start_feature(feature_id: str, feature_path: Optional[str] = None, workflow_mode: Optional[str] = None) -> dict:
@@ -885,7 +878,11 @@ def enrich_execution_contract(result: dict, tool_name: str) -> dict:
             if QUALITY_GATE_POLICY_VERSION not in policy:
                 raise ValueError("Shared phase quality policy version is missing or incompatible")
             command_policy = (PROMPTS_DIR / "project-test-plan-authoring-policy.md").read_text(encoding="utf-8")
-            policy += "\n\n" + command_policy
+            phase_policy = (PROMPTS_DIR / "feature-phase-planning-policy.md").read_text(encoding="utf-8")
+            if FEATURE_PHASE_POLICY_VERSION not in phase_policy:
+                raise ValueError("Feature phase planning policy version is missing or incompatible")
+            policy += "\n\n" + command_policy + "\n\n" + phase_policy
+            result["feature_phase_policy_version"] = FEATURE_PHASE_POLICY_VERSION
             result["quality_gate_policy_version"] = QUALITY_GATE_POLICY_VERSION
             gate_schema = json.loads((PROMPTS_DIR / "phase-gates-exchange-v1.schema.json").read_text(encoding="utf-8"))
             result["phase_gate_exchange_schema"] = gate_schema
@@ -1005,7 +1002,7 @@ async def json_rpc_handler(request: JsonRpcRequest):
                 },
                 {
                     "name": "refine-feature",
-                    "description": "Refine a feature into implementable tasks using the full feature folder plus linked epic/dependency context. Creates a phased implementation plan with tasks, unit tests, and quality checkpoints, then moves the feature from 01_SUBMITTED to 02_READY_TO_DEVELOP.",
+                    "description": "Refine a feature into implementable tasks using the full feature folder plus linked epic/dependency context. Creates mandatory Initial Checkpoint, Planning and Final Checkpoint phases plus only the implementation phases needed by this feature. Declares baseline/final build and test checks and independent review/coverage flags, then moves the feature from 01_SUBMITTED to 02_READY_TO_DEVELOP.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {

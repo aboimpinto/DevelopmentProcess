@@ -121,11 +121,18 @@ Minimum files to inspect:
 
 ### 2.1 Check Every Phase
 
+Read the actual phase list and apply Adaptive Feature Phase Planning. Verify the
+three mandatory roles are present and COMPLETED, including baseline provenance,
+the technical planning report, and fresh final-checkpoint evidence for the final
+integrated source. Missing/failed/invalidated checks block completion. Preserve
+recorded historical baseline limitations for legacy work; never fabricate a pass.
+Do not use a fixed phase count or accept SKIPPED for a mandatory role.
+
 For each phase file, verify:
 
 | Requirement | Expected |
 |-------------|----------|
-| Phase status | COMPLETED or SKIPPED |
+| Phase status | COMPLETED for mandatory roles; COMPLETED or justified SKIPPED for other historical phases |
 | All tasks | COMPLETED or SKIPPED (with justification) |
 | Checkpoint section | Complete |
 | Time tracking | Record available telemetry; missing timestamps are optional audit gaps |

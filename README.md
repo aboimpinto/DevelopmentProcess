@@ -158,9 +158,39 @@ Features flow through state folders in `MemoryBank/Features/`:
 
 | Command | Purpose |
 |---------|---------|
-| `refine-feature` | Transform a feature into a phased implementation plan using the full feature folder plus linked epic/dependency context (9 phases, tasks with Gherkin specs). Moves to `02_READY_TO_DEVELOP/` |
+| `refine-feature` | Transform a feature into a phased implementation plan using the full feature folder plus linked epic/dependency context (mandatory Initial Checkpoint, Planning and Final Checkpoint; only relevant implementation phases, with Gherkin tasks). Moves to `02_READY_TO_DEVELOP/` |
 | `start-feature` | Validate documentation, create git branch, move to `03_IN_PROGRESS/`. Rejects if docs are incomplete or ambiguous. Supports `workflow_mode=autonomous` for official no-routine-prompt execution |
 | `continue-implementation` | Orchestrate task-by-task implementation using feature history plus linked epic/dependency context; assigned planning tasks create canonical `planning-analysis-report.md`; tasks declaring it as input reuse it; one shared execution loop uses declared work and independent `needCodeReview`/`needTestCoverage` flags, regardless of phase number, position or title; build, downstream-aware tests, commit tracking, code review, lessons learned. Supports `workflow_mode=autonomous` to continue through acceptance and completion |
+
+### Adaptive phase planning
+
+Every feature includes **Initial Checkpoint → Planning → feature-specific work →
+Final Checkpoint**. Refinement chooses implementation phases from actual
+outcomes and dependencies. A refactor can use Move Modules and Update Consumers;
+a backend feature needs no UI placeholder. Phase counts and progress come from
+the actual plan. The familiar layered structure is an optional guide.
+
+- **Initial Checkpoint:** execute the project build with zero errors/warnings,
+  clean configured lint, and all required test suites. Record the source and
+  environment baseline; repair failures before Planning or feature implementation.
+- **Planning:** inspect the current code, choose the technical approach, identify
+  files to create/change/move/delete, follow coding guidelines and patterns, and
+  apply relevant lessons learned. Record the how in `planning-analysis-report.md`
+  and revise implementation phases/tasks when evidence warrants it.
+- **Final Checkpoint:** freshly verify the final integrated source with the full
+  required build/test checks and acceptance evidence. Relevant later changes
+  invalidate affected results. Feature completion can reuse this final evidence
+  when inputs have not changed.
+
+Each phase records a `Phase Role` and its explicit tasks, dependencies and checks.
+All roles use the same execution loop and independent `needCodeReview` and
+`needTestCoverage` flags. False flags do not cancel checkpoint command execution.
+Refinement discovers and records commands statically; the implementation client
+runs them. The server delivers the shared
+[Adaptive Feature Phase Planning policy](DevCycleManager/Prompts/feature-phase-planning-policy.md)
+with version `devcycle-feature-phases/v1`; it does not itself execute or certify a
+feature plan. Existing features are reconciled at their next authorized planning
+or execution boundary, preserving valid evidence and historical limitations.
 
 ### Quality and Completion
 

@@ -95,7 +95,7 @@ path is established. Keep an external MemoryBank outside the source repository.
 |---------------|----------|
 | `FeatureDescription.md` | Yes |
 | `FeatureTasks.md` | Yes |
-| `Phases/` (with at least one phase file) | Yes |
+| `Phases/` (required Initial Checkpoint, Planning and Final Checkpoint roles plus relevant implementation phases) | Yes |
 
 **If not found** → Stop: "Feature {{feature_id}} not found in 02_READY_TO_DEVELOP."
 
@@ -104,7 +104,10 @@ path is established. Keep an external MemoryBank outside the source repository.
 ## Phase 2: Pre-Validation (STRICT — Rejects on Failure)
 
 Execute the included **Shared Feature Readiness Gate**, R1–R6. It is the same
-standard refinement must pass before declaring READY.
+standard refinement must pass before declaring READY. Verify the adaptive phase
+roles, dependency order and explicit baseline/final checks. Readiness validates the
+plan; the common implementation loop must actually execute the Initial Checkpoint
+and establish a green baseline before entering Planning or feature implementation.
 
 Read `readiness-validation.md` if present and verify it against current inputs.
 Generate missing evidence for older features. Repair routine technical or

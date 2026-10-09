@@ -333,7 +333,7 @@ LLM: Invokes design-feature with feature_id="FEAT-001"
 **What It Does**:
 - Analyzes the full feature folder plus linked epic/dependency context when present
 - Detects project technology stack (framework, lint, tests)
-- Creates phased implementation plan (Phases 0-8)
+- Creates an adaptive phase plan: mandatory Initial Checkpoint, Planning and Final Checkpoint, with only feature-specific implementation phases that have real work
 - Breaks down each phase into independent, testable tasks
 - Creates `FeatureTasks.md` summary
 - Creates individual phase files in `Phases/` folder
@@ -342,17 +342,20 @@ LLM: Invokes design-feature with feature_id="FEAT-001"
 - Moves feature from `01_SUBMITTED` to `02_READY_TO_DEVELOP`
 
 **Phase Structure**:
-| Phase | Name | Purpose |
-|-------|------|---------|
-| 0 | Health Check | Verify build/tests before starting |
-| 1 | Planning & Analysis | Finalize technical approach |
-| 2 | Data Layer | Models, DTOs, schemas |
-| 3 | Business Logic | Services, domain rules |
-| 4 | Presentation Logic | Controllers, handlers |
-| 5 | User Interface | Views, components |
-| 6 | Integration | Wire everything together |
-| 7 | Testing & Polish | End-to-end tests |
-| 8 | Final Checkpoint | Complete verification |
+| Role | Purpose |
+|------|---------|
+| Initial Checkpoint | Establish a green baseline: build with zero errors/warnings, clean configured lint, all required tests passing |
+| Planning | Decide how: affected files and moves, coding guidelines/patterns, relevant lessons learned, dependencies and verification |
+| Feature-specific implementation | Choose concrete deliverables and dependency boundaries; omit empty UI or other layer placeholders |
+| Final Checkpoint | Freshly verify the final integrated source and required acceptance evidence |
+
+The three mandatory roles are separate phases; implementation names/counts vary.
+Record `Phase Role` and dependencies in each phase and the feature summary.
+Every phase uses the same execution loop and independent review/coverage flags.
+Refinement records checks without running them; a green baseline is required
+before Planning or feature implementation. Planning produces the technical how in
+`planning-analysis-report.md` and updates the proposed work when findings warrant it.
+See [Adaptive phase planning](README.md#adaptive-phase-planning).
 
 **Example**:
 ```
