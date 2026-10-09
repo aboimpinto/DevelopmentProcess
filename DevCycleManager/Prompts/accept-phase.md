@@ -48,6 +48,7 @@ This procedure is DONE when:
 - [ ] Time metrics calculated (estimated vs actual)
 - [ ] All code-checkout changes reconciled; required commits recorded; clean exit verified after final writes
 - [ ] Required publishing succeeded to the authorized remote, or publishing is explicitly not applicable
+- [ ] Due PR delivery conditions verified; no-diff work records N/A
 - [ ] Next phase previewed (or feature completion triggered if final)
 - [ ] If `Workflow Mode = autonomous`, next step auto-invoked when safe
 
@@ -126,7 +127,7 @@ Generate a validation table:
 | Requirement | Status | Details |
 |-------------|--------|---------|
 | All Tasks Completed | | {X}/{Y} completed |
-| Git Commits (Tasks) | | Every task has commits tracked |
+| Git Commits (Tasks) | | Changed tasks have commits tracked; no-diff tasks have N/A evidence |
 | Git Commits (Summary) | | {X} commits in Phase Summary |
 | Build Clean | | 0 errors, 0 warnings |
 | Lint Clean | | 0 errors, 0 warnings (or N/A) |
@@ -156,6 +157,13 @@ Generate a validation table:
 **Code Review** (only when needCodeReview is true):
 - Code Review History table must exist with entries
 - Latest review must be APPROVED or APPROVED_WITH_NOTES
+
+**PR Delivery**: Reconcile `PRDelivery.md` and live PR evidence. Every unit due
+at this boundary must meet project publication/review/merge conditions. Any
+explicitly permitted later boundary stays pending with its rationale, never
+labelled merged. Unknown/failed required delivery blocks acceptance. Unit reviews
+cannot substitute for the required phase checkpoint. Do not create a duplicate
+aggregate PR over already delivered task units.
 
 ### If ANY Gate Fails
 
@@ -269,11 +277,18 @@ Generated with Claude Code
 
 ### 5.3 Publish According to Project Policy
 
-When publishing is required and authorized, push the feature branch to the
+When publishing is required and authorized, publish the recorded delivery unit to the
 project-configured destination. Never assume `origin`, silently rebase, or change
 another checkout to recover a failure. Inspect the cause and use only an authorized
 non-destructive repair; otherwise retain finalization-pending status with the
 exact error. Record explicitly when publishing is not applicable.
+
+Use the recorded unit and project publication command within existing authority.
+Do not push to a merged unit branch or publish an extra aggregate PR. Read back
+remote state and record the restart point. Do not automatically merge. Update
+PRDelivery.md and all feature PR references. Record tracking commits separately
+from implementation and merge evidence; do not force another acceptance commit
+for already delivered source changes.
 
 ---
 
@@ -355,14 +370,14 @@ Workflow behavior:
 ## Rules
 
 1. **Validate first** — check ALL requirements before accepting
-2. **User-centric** — never auto-start next phase
-3. **Git commits required** — both task tables AND Phase Summary
-4. **Code review required** — APPROVED status when needCodeReview is true
+2. **Workflow mode** — autonomous continues when gates permit; single_phase stops after acceptance
+3. **Track actual commits** — both task tables and Phase Summary; no-diff work records N/A
+4. **Code review required** — APPROVED status when needCodeReview is true; applicable unit reviews remain separate
 5. **Justify skips** — incomplete tasks need user-provided reasons
 6. **Update ALL files** — phase file, FeatureTasks.md, start-feature-report, checkpoint
 7. **Calculate metrics** — estimated vs actual with variance
-8. **Comprehensive commit** — stage all uncommitted files, include achievements/metrics/quality status
-9. **Push required** — every successful accept-phase must attempt push and record outcome
+8. **Scoped commit** — stage only intended repository changes; no artificial acceptance commits
+9. **Delivery policy** — satisfy due units through the project workflow; record N/A for no-diff work
 
 ## Error Recovery
 

@@ -107,7 +107,7 @@ Client/orchestrator rule:
 
 ## MCP Commands Reference
 
-The DevCycle MCP Server provides 13 commands that guide features through a complete development lifecycle.
+The DevCycle MCP Server provides 16 commands that guide features through a complete development lifecycle.
 
 ### Feature Lifecycle Overview
 
@@ -762,3 +762,34 @@ Preserve test/criterion/code links at EPIC, FEAT, Phase and Task levels. Require
 tests are executable quality gates; many-to-many coverage does not waive complete
 workflow E2E proof. A bug is reproduced at the appropriate E2E/TwinTest boundary,
 traced to focused coverage and code, then verified through the affected levels.
+
+## Project PR delivery
+
+Read the source project's `.devcycle/PRPolicy.md` (or its explicitly configured
+path). Refinement creates PRDelivery.md; at each phase entry, evaluate actual
+scope/dependencies/compatibility/review size and record task, grouped-task, phase
+or permitted feature delivery. No repository diff means N/A, not an artificial PR.
+Check the boundary after each task and use the project's publication workflow.
+
+Reuse existing scope and gate declarations, including needCodeReview and
+needTestCoverage when present; PR grouping does not replace them. Optional
+`code-review(..., delivery_unit_id="PRU-01")` reviews only a required production
+review unit and cannot approve the entire phase. Keep every PR in feature records
+and verify due delivery at acceptance/completion. See
+[Project PR Delivery](README.md#project-pr-delivery).
+
+## GitHub synchronization commands
+
+`sync-epic(epic_id, epic_path?, project_path?)`,
+`sync-feature(feature_id, feature_path?, project_path?)`, and
+`refresh-delivery(feature_id, feature_path?, project_path?)` are client-executed
+recipes. Read the source project's `.devcycle/GitHubSync.md` or configured path;
+automatic events are opt-in per project. Local records own planning; GitHub owns
+observed delivery facts. Keep credentials/account selection local. Preserve manual
+issue content and stable mappings; never equate a closed issue or parent-branch
+merge with completed feature acceptance. No watcher or automatic Git merge.
+
+Refinement produces the PR forecast locally before synchronization, including
+per-phase and distinct-unit totals, proposed titles/descriptions and dependencies
+for non-feature delivery. See [GitHub synchronization](README.md#github-synchronization)
+for settings, lifecycle hooks, idempotence and failure semantics.

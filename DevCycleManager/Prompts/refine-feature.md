@@ -11,7 +11,7 @@ purpose: Transform a submitted feature into a phased implementation plan with te
 tools: Read, Write, Glob, AskUserQuestion
 triggers: User wants to break a feature into development phases and tasks
 inputs: feature_id, feature_path (optional)
-outputs: FeatureTasks.md + Phases/ folder with phase-0 through phase-8 files, feature moved to 02_READY_TO_DEVELOP
+outputs: FeatureTasks.md, PRDelivery.md, Phases/ folder with phase-0 through phase-8 files, feature moved to 02_READY_TO_DEVELOP
 related: design-feature, start-feature, deep-dive
 -->
 
@@ -95,6 +95,9 @@ This procedure is DONE when:
 - [ ] Missing edge-case tests identified and planned
 - [ ] `Phases/` folder created with phase-0 through phase-8 files
 - [ ] `FeatureTasks.md` created with phase summary, tech stack, build config
+- [ ] Project policy resolved; PRDelivery.md covers tasks, candidate units and dependencies
+- [ ] Non-feature delivery has proposed PR titles/descriptions and per-phase/total counts, with no double counting; forecast assumptions recorded
+- [ ] After local readiness succeeds, configured sync-feature executed or SYNC_PENDING reported separately
 - [ ] Shared readiness gate R1–R6 passed; evidence saved in `readiness-validation.md`
 - [ ] Feature moved from `01_SUBMITTED` to `02_READY_TO_DEVELOP`
 - [ ] FeatureDescription.md updated with state tracking
@@ -364,6 +367,8 @@ Phase-planning requirements:
 
 **Status**: PENDING
 **Depends On**: Phase [N-1] (if applicable)
+**PR Boundary**: undecided
+**PR Decision Basis**: [Candidate grouping and PRDelivery.md reference; evaluate at entry]
 **Estimated Time (Man/Hour)**: [X]h
 **Estimated Time (AI/Hour)**: [Y]h
 **Actual Time (Man/Hour)**: -
@@ -765,6 +770,16 @@ When needCodeReview is true, invoke `code-review` with the current feature and p
 
 ---
 
+## PR Delivery Plan
+
+Apply Project PR Delivery Policy before declaring READY. Resolve the source
+repository policy and create `PRDelivery.md` with task coverage, candidate units,
+provider/consumer ordering, compatibility strategy, validation and reviewer
+context. Link it from FeatureTasks.md and planning-analysis-report.md. Move
+breaking contract changes alongside affected consumers/tests, or plan compatible
+stages. Finalize each phase's grouping at entry from its properties and actual
+work; do not bake named phase exceptions into project settings.
+
 ## Phase 4.5: Validate the Completed Refinement
 
 Execute the included **Shared Feature Readiness Gate**, R1–R6, against the
@@ -861,6 +876,13 @@ Documents Created:
    - Phases/phase-6-integration.md
    - Phases/phase-7-testing-polish.md
    - Phases/phase-8-final-checkpoint.md
+   - PRDelivery.md - Project policy, task coverage, proposed PR titles/descriptions and dependencies
+
+PR Forecast:
+   - Per phase: estimated count, planned unit titles and short descriptions
+   - Feature total: distinct active delivery units; unopened units separately
+   - Assumptions and possible splits/grouping changes; estimate, not a promise
+   - GitHub synchronization: verified / disabled / SYNC_PENDING with reason
 
 Time Estimates:
    - Total Man/Hour: [X]h

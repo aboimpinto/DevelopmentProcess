@@ -61,7 +61,7 @@ This procedure is DONE when:
 - [ ] Feature folder moved to `04_COMPLETED/`
 - [ ] Parent epic updated with completion, delivery references and feature inventory link (if linked)
 - [ ] Whole epic checked for contradictory current statuses; obsolete snapshots moved to linked history
-- [ ] Completion git commit created and pushed
+- [ ] Intended repository completion changes delivered under project policy, or N/A for external/no-diff records
 
 ---
 
@@ -155,6 +155,17 @@ Run `git log origin/{branch}..HEAD --oneline`. If unpushed commits exist -> repo
 ### 3.3 Record Branch Info
 
 Capture: branch name, last commit hash, total commits for this feature.
+
+### 3.3a Reconcile the Delivery Plan
+
+Read `PRDelivery.md` when present and reconcile every task/unit with actual
+branches and PRs. Verify all project-required merges before completion. An
+implemented task or accepted phase is not merge evidence. For stacked delivery,
+verify every required unit reached the final delivery branch, not merely an
+unmerged predecessor, and retain base/head/restack mappings. Retain all PRs,
+including supporting/replaced ones; no extra aggregate feature PR is required.
+For older features without a plan, reconstruct the delivery inventory from
+existing records; do not reopen completed work merely to retrofit properties.
 
 ### 3.4 Collect All PRs and Delivery Evidence
 
@@ -391,6 +402,10 @@ Invocation of `complete-feature` is already the user's confirmation.
 
 ### 9.1 Move Feature Folder
 
+Use a filesystem move for an external/untracked MemoryBank. Use the Git example
+below only when these paths belong to the repository being updated. Lifecycle
+tracking alone must not add production changes or manufacture a source PR.
+
 ```bash
 mkdir -p "{MEMORY_BANK_PATH}/Features/04_COMPLETED"
 git mv "{MEMORY_BANK_PATH}/Features/03_IN_PROGRESS/{{feature_id}}-{name}" "{MEMORY_BANK_PATH}/Features/04_COMPLETED/{{feature_id}}-{name}"
@@ -401,6 +416,11 @@ report. For an external non-Git MemoryBank, use a filesystem move, not `git mv`;
 follow its ownership policy and record Git N/A where applicable.
 
 ### 9.2 Create Completion Commit
+
+Only if intended completion records are in a Git repository and produce a diff.
+Use that repository's required template; otherwise record N/A. External
+MemoryBank tracking does not require a source commit. Never reuse a merged unit
+branch for a new source change.
 
 ```
 feat({{feature_id}}): Complete Feature - {Feature Title}
@@ -417,11 +437,11 @@ Feature moved to COMPLETED state after validation:
 Generated with Claude Code
 ```
 
-### 9.3 Push to Remote
+### 9.3 Publish If Needed
 
-```bash
-git push origin {branch}
-```
+Follow the owning repository's PR policy and authorization for any tracking
+commit. Do not create a duplicate aggregate feature PR or push directly to a
+protected default branch. Record N/A when completion changed only external memory.
 
 ---
 

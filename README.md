@@ -112,7 +112,7 @@ Features flow through state folders in `MemoryBank/Features/`:
 00_EPICS ──► 01_SUBMITTED ──► 02_READY_TO_DEVELOP ──► 03_IN_PROGRESS ──► 04_COMPLETED
 ```
 
-## Commands (13 total)
+## Commands (16 total)
 
 ### Project Setup
 
@@ -166,7 +166,7 @@ Features flow through state folders in `MemoryBank/Features/`:
 
 | Command | Purpose |
 |---------|---------|
-| `code-review` | Review all phase changes against CodeGuidelines. Returns APPROVED, APPROVED_WITH_NOTES, or NEEDS_CHANGES |
+| `code-review` | Review a full phase, or one PR unit with optional `delivery_unit_id`, against CodeGuidelines. Returns APPROVED, APPROVED_WITH_NOTES, or NEEDS_CHANGES |
 | `accept-phase` | Validate all quality gates (build, tests, lint, code review, git commits) and mark a phase COMPLETED. Supports `workflow_mode=autonomous` to continue automatically |
 | `complete-feature` | Validate all phases done, compile lessons learned, retain every associated PR and available merge evidence, synchronize linked EPIC status and acceptance/design tracking, and move feature to `04_COMPLETED/`. Supports `workflow_mode=autonomous` to skip the extra lessons prompt |
 
@@ -183,6 +183,127 @@ Completed siblings are preserved. The epic completes only when all required
 features and epic-level acceptance/delivery gates are complete. No linked epic
 means N/A, not an instruction to create one.
 
+## Project PR Delivery
+
+This capability delivers instructions for the client to execute; the MCP server
+neither reads client repositories nor watches/opens/merges PRs itself. The client
+reads `<source repository>/.devcycle/PRPolicy.md`, or a policy path explicitly
+provided by project instructions. An external MemoryBank is a separate location.
+Existing explicit project conventions take precedence when no policy exists;
+otherwise task-sized meaningful changes are the planning recommendation.
+
+A minimal project policy can say:
+
+```markdown
+# PR Policy
+- Default boundary: task.
+- Evaluate grouping at the start of every phase from the actual tasks.
+- Group only one cohesive independently working improvement with its tests/docs.
+- Record no PR when work produces no source-repository diff.
+- Branching mode: stacked. Continue from a verified predecessor's published head.
+- Target the predecessor branch; track exact bases and restack after upstream fixes.
+- Merge bottom-up to the final delivery branch, retargeting remaining PRs.
+- Use this repository's publication command, review and validation requirements.
+```
+
+Refinement creates `PRDelivery.md` beside FeatureTasks.md: policy provenance,
+task-to-unit coverage, safe dependencies, compatibility strategy and checks.
+Before implementation, evaluate cohesion, scope, expected files/diff/commits,
+contract/runtime risk and required validation. Record the chosen task, grouped,
+phase or permitted feature boundary and rationale. No phase name/number selects
+a PR boundary. Evidence-only work can use `PR Boundary: none` with a reason.
+
+Delivery adds only `PR Boundary` and `PR Decision Basis` to phase records. Reuse
+existing scope and gate decisions (`needCodeReview` / `needTestCoverage` when
+present and the applicable scope policy). This capability leaves phase numbering
+and phase-level gate selection in place. Task grouping does not waive required
+commands or add production review to test-only work. Completed features need no
+retrofit.
+
+After each task, check its unit: continue remaining members, report READY_FOR_PR
+and publish through the project workflow once gates pass, reuse an existing PR,
+or continue on a new dependent branch under stacked policy while review is pending.
+Missing prerequisite implementation/verification still blocks its consumer. Keep
+base/predecessor/head and restack mappings; PR stamping and review diffs exclude
+ancestor commits. Merge bottom-up, restacking/retargeting each child to the delivery
+branch. Explicit merged-prerequisite project policies remain supported.
+Track implementation and delivery separately.
+`code-review(..., delivery_unit_id="PRU-01")` reviews only that unit and saves
+under `code-reviews/delivery-units/PRU-01/`; omitting the argument retains full-phase
+review. Unit approval never approves unfinished phase work. Review evidence names
+the base/head/tree; changed content requires fresh validation/review.
+
+Acceptance checks units due at its boundary; completion verifies all required
+merges and retains all PRs in the feature and relevant epic references. Neither
+creates a duplicate aggregate PR. Every PR explains why/before/after, scope,
+dependencies and actual checks; broader context belongs in the linked feature
+issue. Autonomous workflow does not authorize automatic merges.
+
+## GitHub synchronization
+
+Three MCP commands return instructions for the **local model**. The server does
+not contact GitHub, read project files, store credentials or poll in the background.
+They retain the normal pending_execution / client_llm response contract.
+
+| Command | Arguments | Direction and scope |
+| --- | --- | --- |
+| `sync-epic` | `epic_id`, optional `epic_path`, `project_path` | Local → GitHub: create missing epic/feature issues and update their hierarchy; reuse existing links |
+| `sync-feature` | `feature_id`, optional `feature_path`, `project_path` | Local → GitHub: update an existing feature issue with phases, predicted PRs and actual links; never create an issue |
+| `refresh-delivery` | `feature_id`, optional `feature_path`, `project_path` | GitHub → local → issue: reconcile PR facts locally, then update the existing feature issue table; never merge Git branches |
+
+A minimal project policy lives at the source repository's
+`.devcycle/GitHubSync.md`, or an explicit path from its project instructions:
+
+```markdown
+# GitHub synchronization
+Enabled: true
+Provider: GitHub
+Repository: example/project
+Account: project-maintainer
+MemoryBank: /local/path/to/MemoryBank
+Delivery target: main
+Automatic events: after epic feature definition; after refinement; after PR
+publication; on resume/before completion; after local acceptance/completion
+```
+
+These are client-read instructions, not a machine-parsed configuration schema.
+Use the actual project account and integration branch. Configuration stays local
+if the project ignores .devcycle; no credentials belong in this file. Without
+configuration, automatic synchronization is disabled. Explicit invocation may use
+already established project settings; missing/conflicting identity is reported.
+No project is automatically configured by installing/upgrading DevCycle.
+
+After local epic/feature definition, the lifecycle calls sync-epic. After successful
+refinement or PR publication, it calls sync-feature. Resume and delivery gates call
+refresh-delivery, which saves observations and invokes sync-feature once to update
+the issue table (also retrying a pending issue update). Final local acceptance
+can synchronize feature and parent progress. Existing authorization applies; these
+procedures do not add repeated permission prompts or authorize unrelated actions.
+A failed issue update preserves locally verified delivery facts or local READY
+refinement with SYNC_PENDING rather than
+claiming the write worked or discarding the plan.
+
+Refinement, even with GitHub disabled, produces `PRDelivery.md`. For delivery other
+than one PR per feature it includes each phase's predicted count, stable unit IDs,
+proposed PR titles, short descriptions, task membership and dependencies. A unit
+spanning phases counts once; evidence-only work produces zero PRs. Record a feature
+total, unopened remainder and uncertainty; revise with reasons at phase entry.
+Feature-level delivery records one unit unless there is no repository change.
+
+For example, a phase can have PRU-01 “Retain publication state” and PRU-02 “Publish
+committed references”, followed by a no-diff checkpoint with zero PRs. The total is
+two, not one per task/test and not one per phase by name. Each actual PR replaces
+its planned display entry using the stable feature/unit identity; split or
+superseded PRs keep their history and all links.
+
+Issue updates use explicit managed-section markers and preserve human text and
+attributes. Retries discover existing identities across open/closed issues before
+creating anything. GitHubSync.md beside the feature/epic records readback and
+partial failures. Closed-unmerged differs from merged; a child merged only into
+an unmerged parent is not delivered to the final target. Refresh retains old stack
+boundaries and flags restack/retarget work without executing it. Hosting facts
+never automatically pass phase/feature acceptance or close issues.
+
 ## Typical Workflow
 
 ```
@@ -196,7 +317,7 @@ means N/A, not an instruction to create one.
    c. start-feature                # Validate & create branch
    d. For each phase:
       ├─ continue-implementation   # Implement tasks
-      ├─ code-review               # Review code
+      ├─ code-review               # Under existing phase review gates
       └─ accept-phase              # User accepts phase
    e. complete-feature             # Finalize & move to COMPLETED
 ```
@@ -283,7 +404,7 @@ Every phase must pass before acceptance:
 DevCycleManager/
 ├── main.py              # FastAPI JSON-RPC server (single endpoint at /)
 ├── requirements.txt     # Python dependencies (fastapi, uvicorn)
-└── Prompts/             # Procedure templates (13 prompt files)
+└── Prompts/             # Procedure templates and shared policies
     ├── init-project.json
     ├── submit-epic.md
     ├── submit-feature.md

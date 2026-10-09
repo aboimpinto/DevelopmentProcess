@@ -5,7 +5,7 @@ name: code-review
 purpose: Perform comprehensive code review of a phase against CodeGuidelines
 tools: Read, Write, Glob, Grep, Bash (git and declared verification commands within execution authority)
 triggers: Called by continue-implementation at phase checkpoint, or manually
-inputs: feature_id, phase_number, feature_path (optional)
+inputs: feature_id, phase_number, feature_path (optional), delivery_unit_id (optional)
 outputs: code-reviews/phase-{N}/Code-Review-{timestamp}-{STATUS}.md
 related: continue-implementation, accept-phase, refine-feature
 -->
@@ -15,6 +15,7 @@ related: continue-implementation, accept-phase, refine-feature
 - **Feature ID**: {{feature_id}}
 - **Phase Number**: {{phase_number}}
 - **Feature Path**: {{feature_path}}
+- **Delivery Unit**: {{delivery_unit_id}} (omitted means full phase)
 
 ---
 
@@ -33,12 +34,12 @@ You are a **Senior Code Reviewer** — critical, standards-obsessed, and fair. Y
 ## Completion Checklist
 
 This procedure is DONE when:
-- [ ] Review necessity determined (skip or proceed)
+- [ ] Review scope resolved (unit or full phase)
 - [ ] All changed files reviewed against CodeGuidelines
 - [ ] Test quality validated (meaningful assertions, behavior coverage)
 - [ ] Report generated with severity-categorized findings
-- [ ] Report saved to `code-reviews/phase-{N}/`
-- [ ] Phase checkpoint updated with review results
+- [ ] Report saved to the scope-specific directory
+- [ ] Unit record or phase checkpoint updated for the reviewed scope only
 
 ---
 
@@ -78,7 +79,26 @@ This MCP tool is recipe-oriented. A `pending_execution` response means the MCP c
 2. Locate `Phases/phase-{{phase_number}}-*.md`
 3. **If not found** → Stop and report error
 
-### 1.2 Determine If Review Is Required
+### 1.2 Resolve Review Scope
+
+When `delivery_unit_id` is supplied, locate that exact unit in `PRDelivery.md`.
+Validate its task membership includes the supplied phase, base/head, prerequisites
+and changed files. Missing/unknown/inconsistent units block review; do not silently
+fall back to a whole-phase review. Only this unit can receive the review verdict.
+Use existing scope/gate declarations, including `needCodeReview` and
+`needTestCoverage` when present, and the applicable shared scope policy. These
+flags are independent; PR grouping does not redefine them. A unit with no
+required production review records NOT_REQUIRED with its scope reason and test
+verification evidence; that is not an APPROVED production review. Test-only
+assertion verification must not become a production-code review of test files.
+For NOT_REQUIRED, save the scope rationale and verification evidence in the unit
+record and return without executing the production-review sections below.
+
+Without the ID, review the full phase under its existing rules below, including
+cross-unit integration. An applicable shared scope policy takes precedence over
+legacy boilerplate. This change does not replace phase-level gate selection.
+
+### 1.2a Existing Full-Phase Selection (without delivery_unit_id)
 
 Read the Code review applicability in the explicit phase gate contract.
 **SKIP** when it is NOT_APPLICABLE with a scope reason; keep any separately
@@ -107,13 +127,21 @@ Read and internalize:
 - `{MEMORY_BANK_PATH}/Architecture/` — layers, component patterns, module boundaries
 - `{MEMORY_BANK_PATH}/LessonsLearned/` — past mistakes, proven patterns, anti-patterns
 
-### 1.4 Extract Phase Context
+### 1.4 Extract Review Context
 
-1. Read `FeatureDescription.md`, `FeatureTasks.md`, and the phase file
-2. Extract commit hashes from the phase checkpoint's "Git Commits" table
-3. For each commit: `git show --name-only --pretty="" <hash>` to get changed files
-4. Compile unique file list
-5. Note any Gherkin behavior specs from the phase tasks
+1. Read FeatureDescription.md, FeatureTasks.md, the phase file, project PR policy
+   and PRDelivery.md (when present).
+2. For a unit, resolve its intended base and current head to actual commit SHAs;
+   inspect the complete diff (`git diff <base>...<head>`) and all changed/deleted
+   files. Include any pending intended changes explicitly; approval for publication
+   requires the final committed/tested tree. Do not review only the latest commit.
+3. For a full phase, inspect the recorded phase commits and all participating
+   unit diffs, their prerequisites and combined behavior. Preserve original-to-merge
+   mappings if repository publication rewrites commits.
+4. Record scope, base/head SHAs, tree, changed files and validation evidence.
+   Changed content invalidates earlier approval. A message-only rewrite may reuse
+   it only with verified identical trees/diffs and an explicit revision mapping.
+5. Note all behavior specs for the requested scope.
 6. Apply Required Dependency Order: inspect prerequisite evidence and required
    files absent from the diff (startup, configuration, migrations, docs/catalog).
    Do not approve consumer work with unverified prerequisites.
@@ -156,7 +184,11 @@ For each changed file, check:
 Generate the review report using this template:
 
 ```markdown
-# Phase Code Review Report
+# Code Review Report
+
+**Scope**: {phase or delivery unit ID}
+**Base / Head / Tree**: {verified revisions}
+**Tasks**: {actual reviewed task IDs}
 
 **Feature**: {{feature_id}} - {Feature Name}
 **Phase**: Phase {{phase_number}} - {Phase Name}
@@ -272,13 +304,17 @@ Missing/failing required evidence is CRITICAL (Must Fix), producing NEEDS_CHANGE
 
 ### 4.1 Save Report
 
-Location: `{Feature folder}/code-reviews/phase-{{phase_number}}/Code-Review-{YYYY-MM-DD-HH-MM}-{STATUS}.md`
-
-Create `code-reviews/` and `phase-{N}/` folders if they don't exist.
+For full-phase review: `{Feature folder}/code-reviews/phase-{{phase_number}}/Code-Review-{YYYY-MM-DD-HH-MM}-{STATUS}.md`.
+For unit review: `{Feature folder}/code-reviews/delivery-units/{delivery_unit_id}/Code-Review-{YYYY-MM-DD-HH-MM}-{STATUS}.md`.
+Create the selected directory if needed.
 
 ### 4.2 Update Phase Checkpoint
 
-Add/append row to the Code Reviews table in the phase file:
+For a unit review, append evidence/verdict/revisions to that unit in PRDelivery.md.
+Link it from the phase as unit-scoped evidence, but do NOT change the full phase's
+Latest Review Status, completion or acceptance. Unreviewed tasks remain unapproved.
+
+For a full-phase review, add/append a row to the Code Reviews table in the phase file:
 
 ```markdown
 ### Code Reviews for This Phase
@@ -300,8 +336,8 @@ Status icons: APPROVED, APPROVED_WITH_NOTES, NEEDS_CHANGES
 ## Code Review Complete
 **Feature**: {{feature_id}} | **Phase**: {{phase_number}} | **Status**: {STATUS}
 **Issues**: Critical: {n}, High: {n}, Standard: {n}, Recommendations: {n}
-**Report**: `code-reviews/phase-{N}/Code-Review-{ts}-{STATUS}.md`
-**Next**: {Based on status — proceed to acceptance, or fix and re-review}
+**Report**: {actual scope-specific report path}
+**Next**: {Unit: its PR boundary check; full phase: checkpoint; or fix/re-review}
 ```
 
 ---
@@ -313,15 +349,15 @@ Status icons: APPROVED, APPROVED_WITH_NOTES, NEEDS_CHANGES
 3. **Explain impact** — why it matters, not just that it's wrong
 4. **Acknowledge good work** — reinforce correct patterns
 5. **Actionable only** — every finding must have a clear resolution
-6. **Skip when appropriate** — don't review phases that don't need it
-7. **Always update checkpoint** — record results in the phase file
+6. **Respect existing gates** — preserve scope declarations and applicable scope policy
+7. **Preserve scope** — unit approval never approves an unfinished phase
 
 ## Error Recovery
 
 | Scenario | Action |
 |----------|--------|
 | Git commands fail | Report: "Cannot extract commits. Ensure git is available and commits are tracked in phase file." |
-| File not found | Skip file, note in report: "File referenced in commits but not found on disk." |
+| File not found | Inspect deletion/rename in Git; unresolved missing evidence blocks approval. |
 | CodeGuidelines empty | Stop: "Cannot review without guidelines. Create them in {MEMORY_BANK_PATH}/CodeGuidelines/ first." |
 
 ---

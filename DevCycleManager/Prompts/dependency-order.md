@@ -39,6 +39,11 @@ VERIFIED means the needed implementation is present in the consumer's actual
 working/integration revision and the applicable checks passed. For a runtime
 service, distinguish implemented provisioning from current health; verify the
 supported startup/configuration path and check health before dependent execution.
+In a configured PR stack, implemented and verified code inherited from an open
+predecessor PR can satisfy this requirement. Record the exact ancestor/base and
+consumer revision; a merge is not required merely to start dependent work.
+Reverify after restacking or upstream changes. Final delivery still requires the
+project's ordered merges to its delivery branch.
 CI-provided services do not prove local startup. An external managed service may
 satisfy a dependency through the agreed provisioning/configuration contract;
 do not introduce local Docker as a universal requirement.
