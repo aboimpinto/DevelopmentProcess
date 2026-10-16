@@ -1,6 +1,6 @@
 ## Shared Feature Readiness Gate
 
-**Gate version: 2.** This gate is included by the server in both `refine-feature`
+**Gate version: 4.** This gate is included by the server in both `refine-feature`
 and `start-feature`. It is the authoritative readiness standard for both.
 Apply it to the finished plan before declaring READY, and recheck it before
 starting. A successful MCP call returns instructions; it does not certify that
@@ -36,7 +36,7 @@ with the exact missing capability, evidence, or decision. Keep detail proportion
 | R3 | Ordering and failures | Ordered side effects, commit/eligibility boundary, partial-state retention/cleanup, retry/recovery ownership, and externally observable result at each meaningful failure boundary. Do not imply cross-system atomicity without evidence. |
 | R4 | Compatibility | Existing supported inputs and consumers, legacy versions/readers, output shapes/status/exit behavior, and deliberate breaking changes. Check less prominent modes too, such as file versus directory input. |
 | R5 | Acceptance traceability | Stable scenario IDs/tags link Given/When/Then acceptance scenarios to implementation tasks and planned integration tests. Cover happy paths, contract validation, failure boundaries, and preserved modes. Include reproducible manual steps and expected outcomes. Distinguish PLANNED, BOUND, and actually RUN evidence; partial feature coverage does not pass an entire epic. |
-| R6 | Execution plan | Relevant phases/dependencies, repository-backed build/test/lint commands and prerequisites, time/status fields, checkpoint/commit/review tables. Record N/A with reasons. No unresolved required command placeholders. Include supported startup/configuration ownership and cold-start/repeat-start acceptance where applicable; test fixture setup is not user setup evidence. |
+| R6 | Execution plan | Adaptive phase list with exactly one Initial Checkpoint, one Planning phase and one Final Checkpoint in the required order, only implementation phases with real deliverables, explicit roles/dependencies and criterion ownership. Repository-backed build/test/lint commands and prerequisites, time/status fields, checkpoint/commit/review tables. Record N/A with reasons. No unresolved required command placeholders. Include supported startup/configuration ownership and cold-start/repeat-start acceptance where applicable; test fixture setup is not user setup evidence. Include effective project PR policy, PRDelivery.md task coverage, safe candidate units and dependency order, existing scope/gate declarations, and the phase-entry grouping decision checkpoint. |
 
 For applicable R2–R4 contracts, write or update `ImplementationContract.md` (or
 link an existing authoritative design). Reconcile contradictory feature, task,
@@ -45,12 +45,37 @@ not silently override contradictory active requirements.
 
 ### Repair, then validate the final documents
 
+R6 also verifies the shared Adaptive Feature Phase Planning policy: baseline and
+fresh final-checkpoint execution are explicitly assigned; Planning owns the
+technical approach, affected files, coding patterns and lessons learned. Both
+checkpoint command sets are independent of review/coverage flags. Phase counts,
+links and forecasts come from the actual plan; no empty UI/layer placeholders.
+At refinement and Start Feature these are planned obligations, not invented passes.
+
+R6 includes the PR forecast required by Project PR Delivery: proposed unit titles,
+short descriptions, exact task membership, dependency edges, one counting phase
+per unit, per-phase and distinct feature totals, and explicit zero/no-diff reasons.
+For non-feature delivery this is required before READY. Check arithmetic and task
+coverage; do not accept missing planning as a zero forecast. GitHub sync can be
+disabled or pending independently of local readiness; never claim a remote update
+succeeded merely because this gate passed.
+
+R6 distinguishes revisable PR estimates from explicit user hard limits. Require
+each boundary's purpose, tasks, affected consumers, dependencies, tests/docs and
+safe resulting tree, plus publication at its own gates and the planned stack
+bases. A phase can own zero, one or several units. Final reconciliation must not
+hold earlier completed units or add an aggregate PR. Reconcile revised parent
+EPIC totals and superseded-unit mappings without counting historical units twice.
+Assess per-commit feasibility separately: identify the exact blocked unit/task,
+limit and evidence, evaluate independent work, and name any feature-wide readiness
+gate that prevents it. Smaller PRs neither solve commit staging nor waive R1–R6.
+
 1. Resolve technical omissions, document choices, and repair formatting or
    missing tracking templates within the existing scope.
 2. Re-read the resulting documents and run every check above against the final
    plan, including the corresponding checks normally performed at start.
 3. Save `readiness-validation.md` with date, gate version, repository revision
-   and dirty-state observation, reviewed document paths/content hashes, all
+   and dirty-state observation, reviewed document paths/content hashes (including project PR policy and PRDelivery.md), all
    R1–R6 outcomes and evidence, the dependency table reference and stage-specific verdict, decisions/corrections, unresolved blockers, and
    final PASS/BLOCKED. Exclude the report itself from its input hashes. State
    explicitly which tests are only planned and which, if any, actually ran.

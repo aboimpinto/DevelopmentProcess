@@ -13,13 +13,48 @@ from deep_dive_host import HOST_STAGES, hosted_deep_dive_recipe
 # --- Constants & Configuration ---
 # Path to the directory containing prompt/config files
 PROMPTS_DIR = Path(__file__).parent / "Prompts"
+PR_DELIVERY_PROCEDURES = frozenset({
+    "deep-dive.md", "refine-feature.md", "start-feature.md",
+    "continue-implementation.md", "code-review.md", "accept-phase.md",
+    "complete-feature.md",
+})
+GITHUB_SYNC_COMMANDS = {
+    "sync-epic": ("epic", "local_to_github", "Create or update the epic and feature issue hierarchy from local records."),
+    "sync-feature": ("feature", "local_to_github", "Update an existing feature issue with phases, predicted PRs and actual delivery links."),
+    "refresh-delivery": ("feature", "github_to_local_then_issue", "Refresh local PR delivery facts from GitHub, then update the existing feature issue delivery table without changing Git branches."),
+}
+GITHUB_SYNC_PROCEDURES = frozenset({
+    *(f"{name}.md" for name in GITHUB_SYNC_COMMANDS),
+    "create-epic-features.md", "refine-feature.md", "start-feature.md",
+    "continue-implementation.md", "accept-phase.md", "complete-feature.md",
+})
+
+
+def github_sync_tools() -> list:
+    """Discover client-executed synchronization tools; no provider access here."""
+    return [{
+        "name": name,
+        "description": description + " Returns instructions for the local model; does not perform synchronization on the server.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                f"{kind}_id": {"type": "string", "pattern": f"^{kind.upper() if kind == 'epic' else 'FEAT'}-[0-9]+$"},
+                f"{kind}_path": {"type": "string", "description": f"Optional local {kind} folder; read by the client only."},
+                "project_path": {"type": "string", "description": "Optional local source repository for project synchronization settings; otherwise use established project context."},
+            },
+            "required": [f"{kind}_id"],
+        },
+    } for name, (kind, _, description) in GITHUB_SYNC_COMMANDS.items()]
 
 DEEP_DIVE_MODES = ("comprehensive", "targeted")
 DEEP_DIVE_RESPONSE_MODES = ("adaptive_interview", "question_manifest")
 FEATURE_WORKFLOW_MODES = ("autonomous", "single_phase")
 ACCEPTANCE_POLICY_VERSION = "acceptance-responsibility/v1"
 ACCEPTANCE_POLICY_TOOLS = frozenset(("submit-epic", "submit-feature", "create-epic-features", "link-feature-to-epic", "design-feature", "deep-dive", "refine-feature", "start-feature", "continue-implementation", "code-review", "accept-phase", "complete-feature"))
+SPECIFICATION_POLICY_VERSION = "devcycle-specification-levels/v1"
+SPECIFICATION_POLICY_TOOLS = ACCEPTANCE_POLICY_TOOLS | frozenset(GITHUB_SYNC_COMMANDS)
 QUALITY_GATE_POLICY_VERSION = "devcycle-phase-quality/v2"
+FEATURE_PHASE_POLICY_VERSION = "devcycle-feature-phases/v1"
 QUALITY_GATE_TOOLS = frozenset(("refine-feature", "start-feature", "continue-implementation",
                                "code-review", "accept-phase", "complete-feature"))
 
@@ -90,12 +125,61 @@ class DeepDiveRequest:
 
 
 def load_procedure(name: str) -> str:
-    """Include mandatory dependency ordering in every lifecycle recipe."""
+    """Include required shared policies in client-executed lifecycle recipes."""
     procedure = (PROMPTS_DIR / name).read_text(encoding="utf-8")
+    if not procedure.strip():
+        raise ValueError(f"Required {name} procedure is empty")
     dependencies = (PROMPTS_DIR / "dependency-order.md").read_text(encoding="utf-8")
     if not dependencies.strip():
         raise ValueError("Required dependency-order.md policy is empty")
-    return procedure + "\n\n---\n\n" + dependencies
+    procedure += "\n\n---\n\n" + dependencies
+    if name in PR_DELIVERY_PROCEDURES:
+        delivery = (PROMPTS_DIR / "pr-delivery.md").read_text(encoding="utf-8")
+        if not delivery.strip():
+            raise ValueError("Required pr-delivery.md policy is empty")
+        procedure += "\n\n---\n\n" + delivery
+    if name in GITHUB_SYNC_PROCEDURES:
+        sync = (PROMPTS_DIR / "github-sync.md").read_text(encoding="utf-8")
+        if not sync.strip():
+            raise ValueError("Required github-sync.md policy is empty")
+        procedure += "\n\n---\n\n" + sync
+    return procedure
+
+
+async def run_github_sync(name: str, arguments: dict) -> dict:
+    """Return a recipe only. Project paths and credentials stay with the client."""
+    kind, direction, _ = GITHUB_SYNC_COMMANDS[name]
+    identifier = arguments.get(f"{kind}_id")
+    prefix = "EPIC" if kind == "epic" else "FEAT"
+    if not isinstance(identifier, str) or not re.fullmatch(rf"{prefix}-[0-9]+", identifier):
+        return {"status": "error", "message": f"{kind}_id must be {prefix}- followed by digits"}
+    for field in (f"{kind}_path", "project_path"):
+        value = arguments.get(field)
+        if value is not None and (not isinstance(value, str) or not value.strip() or any(c in value for c in "\r\n\0")):
+            return {"status": "error", "message": f"{field} must be a nonempty single-line path when provided"}
+    try:
+        procedure = load_procedure(f"{name}.md")
+    except (FileNotFoundError, ValueError) as exc:
+        return {"status": "error", "message": f"Cannot load required procedure policy: {exc}"}
+    # Substitute once so a path containing template-like text stays literal data.
+    values = {
+        f"{kind}_id": identifier,
+        f"{kind}_path": arguments.get(f"{kind}_path") or "[Locate in the project's MemoryBank]",
+        "project_path": arguments.get("project_path") or "[Use established project context]",
+    }
+    procedure = re.sub(r"\{\{(\w+)\}\}", lambda match: values.get(match[1], match[0]), procedure)
+    return {
+        "status": "pending_execution", "action": "execute_procedure",
+        "procedure_name": name, "instructions": procedure,
+        "sync_direction": direction,
+        "context_files": ["AGENTS.md", ".devcycle/GitHubSync.md", "project.json", "GitHubSync.md", "PRDelivery.md"],
+        "outputs": (["Epic and feature issue links", "GitHubSync.md (verified synchronization receipt)"]
+                    if kind == "epic" else
+                    ["Existing feature issue managed sections", "GitHubSync.md (verified synchronization receipt)"]
+                    if direction == "local_to_github" else
+                    ["PRDelivery.md (observed hosting facts and restack flags)", "Local feature/epic delivery summaries", "Existing feature issue delivery table", "GitHubSync.md (refresh and issue-sync receipt)"]),
+        "message": "Execute locally using this project's settings and account. Tool success means recipe delivery, not completed synchronization.",
+    }
 
 
 # --- Mocking the MCP Context/Sampling for the Prototype ---
@@ -343,8 +427,8 @@ async def run_refine_feature(feature_id: str, feature_path: Optional[str] = None
     The Recipe for refining a feature into implementable tasks.
     Transforms a feature from 01_SUBMITTED to 02_READY_TO_DEVELOP by:
     1. Analyzing all feature-folder documents plus linked epic/dependency context
-    2. Creating phased implementation plan
-    3. Breaking down into independent tasks with unit tests
+    2. Creating an adaptive phase plan with mandatory checkpoint and planning roles
+    3. Breaking down into tasks with independently declared verification
     4. Adding checkpoints with quality gates
     """
     # Load the procedure template
@@ -385,17 +469,10 @@ async def run_refine_feature(feature_id: str, feature_path: Optional[str] = None
             "FeatureTasks.md",
             "readiness-validation.md",
             "ImplementationContract.md (when applicable)",
-            "Phases/phase-0-health-check.md",
-            "Phases/phase-1-planning-analysis.md",
-            "Phases/phase-2-data-layer.md",
-            "Phases/phase-3-business-logic.md",
-            "Phases/phase-4-presentation-logic.md",
-            "Phases/phase-5-user-interface.md",
-            "Phases/phase-6-integration.md",
-            "Phases/phase-7-testing-polish.md",
-            "Phases/phase-8-final-checkpoint.md"
+            "Phases/*.md (Initial Checkpoint, Planning, feature-specific implementation phases, Final Checkpoint)",
+            "PRDelivery.md (project policy, proposed PR titles/descriptions, per-phase forecast and dependencies)"
         ],
-        "message": "Execute the refine-feature procedure. Read the full feature folder plus any linked epic/dependency context, then create a phased implementation plan with tasks, unit tests, and quality checkpoints. Execute the included shared readiness gate and save readiness-validation.md before declaring READY or moving to 02_READY_TO_DEVELOP."
+        "message": "Execute the refine-feature procedure. Read the full feature folder plus any linked epic/dependency context, then create an adaptive phase plan with mandatory Initial Checkpoint, Planning and Final Checkpoint roles, only relevant implementation phases, and independently declared checks/review/coverage. Execute the included shared readiness gate and save readiness-validation.md before declaring READY or moving to 02_READY_TO_DEVELOP."
     }
 
 async def run_start_feature(feature_id: str, feature_path: Optional[str] = None, workflow_mode: Optional[str] = None) -> dict:
@@ -446,7 +523,7 @@ async def run_start_feature(feature_id: str, feature_path: Optional[str] = None,
             "pre-validation-report-[STATUS]-[timestamp].md",
             "start-feature-report-[timestamp].md"
         ],
-        "message": "Execute the start-feature procedure. This validates the feature, creates a git branch, and moves it to 03_IN_PROGRESS. workflow_mode defaults to autonomous; single_phase implements and accepts exactly the first incomplete phase, then stops. If pre-validation fails, the process STOPS with a rejection report."
+        "message": "Execute the start-feature procedure. This validates the feature, prepares delivery branches when needed, and moves it to 03_IN_PROGRESS. workflow_mode defaults to autonomous; single_phase implements and accepts exactly the first incomplete phase, then stops. If pre-validation fails, the process STOPS with a rejection report."
     }
 
 async def run_continue_implementation(feature_id: str, feature_path: Optional[str] = None, mode: Optional[str] = None, workflow_mode: Optional[str] = None) -> dict:
@@ -454,7 +531,7 @@ async def run_continue_implementation(feature_id: str, feature_path: Optional[st
     The Recipe for continuing feature implementation.
     Orchestrates the systematic implementation of an IN_PROGRESS feature:
     1. Discovers current state (feature, phase, task)
-    2. Creates/refines the canonical Phase 1 planning document using feature, epic, and dependency context
+    2. Creates/refines the canonical planning document when assigned by a task, using feature, epic, and dependency context
     3. Executes tasks following specifications
     4. Manages quality (build, tests, code-review)
     5. Tracks progress (update phase files, FeatureTasks.md)
@@ -500,7 +577,8 @@ async def run_continue_implementation(feature_id: str, feature_path: Optional[st
         "outputs": [
             "Phase updates in Phases/*.md",
             "FeatureTasks.md updates",
-            "planning-analysis-report.md (canonical Phase 1 planning artifact)",
+            "planning-analysis-report.md (canonical feature-level artifact produced by its assigned planning task)",
+            "PRDelivery.md (phase decision, unit branches, PR state and evidence)",
             "code-reviews/phase-{N}/*.md",
             "LessonsLearned/{feature_id}/Phase-{N}-{name}.md",
             "feature-completion-report.md (when all phases complete)"
@@ -556,24 +634,30 @@ async def run_accept_phase(feature_id: str, phase_number: int, feature_path: Opt
             "FeatureTasks.md updated with COMPLETED status and actual times",
             "start-feature-report-*.md updated",
             "Checkpoint section marked Complete",
-            "Git commit with phase achievements",
+            "Tracking commit when needed, or N/A for external/no-diff records",
             "Next phase preview (if not final phase)",
             "feature-completion-report.md (if final phase)"
         ],
-        "message": "Execute the accept-phase procedure. Accept only evidence from fully green configured build, lint, and test commands. workflow_mode defaults to autonomous; single_phase stops after this phase is accepted."
+        "message": "Execute the accept-phase procedure. Accept only evidence from fully green configured build, lint, and test commands. Update completion records and verify due PR delivery. workflow_mode defaults to autonomous; single_phase stops after this phase is accepted."
     }
 
-async def run_code_review(feature_id: str, phase_number: int, feature_path: Optional[str] = None) -> dict:
+async def run_code_review(feature_id: str, phase_number: int, feature_path: Optional[str] = None, delivery_unit_id: Optional[str] = None) -> dict:
     """
     The Recipe for performing a comprehensive code review.
     Reviews all code changes in a phase against project CodeGuidelines:
-    1. Determines if review is required (skip for non-code phases)
+    1. Resolves requested review scope (phase or delivery unit)
     2. Extracts phase context (commits, changed files)
     3. Reviews each file against CodeGuidelines
     4. Validates test quality (meaningful assertions, coverage)
     5. Generates detailed report with actionable feedback
-    6. Updates phase checkpoint with review results
+    6. Updates only the reviewed unit or full-phase checkpoint
     """
+    if delivery_unit_id is not None and (
+        not isinstance(delivery_unit_id, str)
+        or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}", delivery_unit_id)
+    ):
+        return {"status": "error", "message": "delivery_unit_id must be a 1-64 character alphanumeric, hyphen or underscore identifier"}
+
     # Load the procedure template
     try:
         procedure_template = load_procedure("code-review.md")
@@ -588,10 +672,13 @@ async def run_code_review(feature_id: str, phase_number: int, feature_path: Opti
     procedure = procedure.replace("{{phase_number}}", str(phase_number) if phase_number is not None else "")
     procedure = procedure.replace("{{feature_path}}", feature_path or "[Not provided - search in {MEMORY_BANK_PATH}/Features/ as defined in CLAUDE.md]")
 
+    procedure = procedure.replace("{{delivery_unit_id}}", delivery_unit_id or "N/A - full phase review")
+
     return {
         "status": "pending_execution",
         "action": "execute_procedure",
         "procedure_name": "code-review",
+        "review_scope": {"kind": "delivery_unit" if delivery_unit_id else "phase", "delivery_unit_id": delivery_unit_id},
         "instructions": procedure,
         "context_folders": [
             "{memory_bank}/CodeGuidelines/",
@@ -603,8 +690,10 @@ async def run_code_review(feature_id: str, phase_number: int, feature_path: Opti
             "CLAUDE.md"
         ],
         "outputs": [
-            "code-reviews/phase-{N}/Code-Review-{timestamp}-{STATUS}.md",
-            "Phase checkpoint updated with review results"
+            (f"code-reviews/delivery-units/{delivery_unit_id}/Code-Review-{{timestamp}}-{{STATUS}}.md"
+             if delivery_unit_id else "code-reviews/phase-{N}/Code-Review-{timestamp}-{STATUS}.md"),
+            ("PRDelivery.md unit updated with scoped review results"
+             if delivery_unit_id else "Phase checkpoint updated with review results")
         ],
         "message": "Execute the code-review procedure locally. `pending_execution` is expected and means the MCP call succeeded with a recipe to run. Do not retry the same code-review MCP call unless a procedure step explicitly requires it."
     }
@@ -791,7 +880,11 @@ def enrich_execution_contract(result: dict, tool_name: str) -> dict:
             if QUALITY_GATE_POLICY_VERSION not in policy:
                 raise ValueError("Shared phase quality policy version is missing or incompatible")
             command_policy = (PROMPTS_DIR / "project-test-plan-authoring-policy.md").read_text(encoding="utf-8")
-            policy += "\n\n" + command_policy
+            phase_policy = (PROMPTS_DIR / "feature-phase-planning-policy.md").read_text(encoding="utf-8")
+            if FEATURE_PHASE_POLICY_VERSION not in phase_policy:
+                raise ValueError("Feature phase planning policy version is missing or incompatible")
+            policy += "\n\n" + command_policy + "\n\n" + phase_policy
+            result["feature_phase_policy_version"] = FEATURE_PHASE_POLICY_VERSION
             result["quality_gate_policy_version"] = QUALITY_GATE_POLICY_VERSION
             gate_schema = json.loads((PROMPTS_DIR / "phase-gates-exchange-v1.schema.json").read_text(encoding="utf-8"))
             result["phase_gate_exchange_schema"] = gate_schema
@@ -803,6 +896,14 @@ def enrich_execution_contract(result: dict, tool_name: str) -> dict:
                 raise ValueError("Acceptance responsibility policy version is missing or incompatible")
             result["acceptance_policy_version"] = ACCEPTANCE_POLICY_VERSION
             result["instructions"] = acceptance_policy + "\n\n---\n\n" + result["instructions"]
+        if tool_name in SPECIFICATION_POLICY_TOOLS:
+            specification_policy = (PROMPTS_DIR / "specification-level-policy.md").read_text(encoding="utf-8")
+            if SPECIFICATION_POLICY_VERSION not in specification_policy:
+                raise ValueError("Specification level policy version is missing or incompatible")
+            result["specification_level_policy_version"] = SPECIFICATION_POLICY_VERSION
+            # Includes hosted interviews: guidance cannot expand their mutation
+            # authority, host stages or exact response schemas.
+            result["instructions"] += "\n\n---\n\n" + specification_policy
         # This is a successful tool call that returns a recipe for client-side execution.
         result.setdefault("tool_call_success", True)
         result.setdefault("execution_owner", "client_llm")
@@ -832,7 +933,7 @@ async def json_rpc_handler(request: JsonRpcRequest):
     if request.method == "initialize":
         return JsonRpcResponse(id=request.id, result={
             "protocolVersion": "2024-11-05",
-            "serverInfo": {"name": "DevCycleManager", "version": "0.3.0-remote"},
+            "serverInfo": {"name": "DevCycleManager", "version": "0.3.1-remote"},
             "capabilities": {"tools": {"listChanged": False}}
         })
 
@@ -911,7 +1012,7 @@ async def json_rpc_handler(request: JsonRpcRequest):
                 },
                 {
                     "name": "refine-feature",
-                    "description": "Refine a feature into implementable tasks using the full feature folder plus linked epic/dependency context. Creates a phased implementation plan with tasks, unit tests, and quality checkpoints, then moves the feature from 01_SUBMITTED to 02_READY_TO_DEVELOP.",
+                    "description": "Refine a feature into implementable tasks using the full feature folder plus linked epic/dependency context. Creates mandatory Initial Checkpoint, Planning and Final Checkpoint phases plus only the implementation phases needed by this feature. Declares baseline/final build and test checks and independent review/coverage flags, then moves the feature from 01_SUBMITTED to 02_READY_TO_DEVELOP.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
@@ -936,7 +1037,7 @@ async def json_rpc_handler(request: JsonRpcRequest):
                 },
                 {
                     "name": "continue-implementation",
-                    "description": "Returns operations for the calling coding agent to execute locally. Continue implementing an IN_PROGRESS feature. Phase 1 creates or refreshes the canonical `planning-analysis-report.md` using feature, epic, and dependency context; later phases must read and reuse it instead of re-planning. Also orchestrates task execution, quality gates (build/test/review), downstream-aware test coverage, phase completion, and LessonsLearned documents. With `workflow_mode=autonomous`, it continues through code review, phase acceptance, next phases, and final completion without routine user interaction.",
+                    "description": "Returns operations for the calling coding agent to execute locally. Continue implementing an IN_PROGRESS feature. Tasks assigned to planning create or refresh the canonical `planning-analysis-report.md` using feature, epic, and dependency context; tasks declaring it as an input read and reuse it. One shared execution loop follows declared tasks and independent needCodeReview/needTestCoverage flags; phase numbers, positions and titles do not select work or gates. Also orchestrates task execution, quality gates (build/test/review), downstream-aware test coverage, phase completion, and LessonsLearned documents. With `workflow_mode=autonomous`, it continues through code review, phase acceptance, next phases, and final completion without routine user interaction.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
@@ -950,7 +1051,7 @@ async def json_rpc_handler(request: JsonRpcRequest):
                 },
                 {
                     "name": "accept-phase",
-                    "description": "Returns operations for the calling coding agent to execute locally. Accept a completed phase. Validates requirements, marks phase as COMPLETED in all files (phase file, FeatureTasks.md, start-feature-report), updates time tracking, creates git commit, and previews next phase. With `workflow_mode=autonomous`, it continues automatically to the next phase or feature completion when safe.",
+                    "description": "Returns operations for the calling coding agent to execute locally. Accept a completed phase. Validates requirements, marks phase as COMPLETED in all files (phase file, FeatureTasks.md, start-feature-report), updates time tracking, records due PR delivery, and previews next phase. With `workflow_mode=autonomous`, it continues automatically to the next phase or feature completion when safe.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
@@ -964,13 +1065,14 @@ async def json_rpc_handler(request: JsonRpcRequest):
                 },
                 {
                     "name": "code-review",
-                    "description": "Perform comprehensive code review of a phase. Reviews all changed files against CodeGuidelines, validates test quality, generates detailed report with APPROVED/APPROVED_WITH_NOTES/NEEDS_CHANGES status, and updates phase checkpoint.",
+                    "description": "Review a full phase or optional delivery_unit_id against CodeGuidelines. Validate changed files and tests; report APPROVED/APPROVED_WITH_NOTES/NEEDS_CHANGES. Update only the reviewed unit or full-phase checkpoint.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
                             "feature_id": {"type": "string", "description": "The feature ID (e.g., FEAT-001)"},
                             "phase_number": {"type": "integer", "description": "The phase number to review (e.g., 2, 3, 4)"},
-                            "feature_path": {"type": "string", "description": "Optional: Direct path to the feature folder if known"}
+                            "feature_path": {"type": "string", "description": "Optional: Direct path to the feature folder if known"},
+                            "delivery_unit_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$", "description": "Optional: Review this PRDelivery.md unit before its PR, instead of the whole phase"}
                         },
                         "required": ["feature_id", "phase_number"]
                     }
@@ -1003,13 +1105,15 @@ async def json_rpc_handler(request: JsonRpcRequest):
                         "required": ["file_path"]
                     }
                 }
-            ]
+            ] + github_sync_tools()
         })
 
     elif request.method == "tools/call":
         try:
             tool_name, tool_args = extract_tool_call(request.params)
-            if tool_name == "init-project":
+            if tool_name in GITHUB_SYNC_COMMANDS:
+                result = await run_github_sync(tool_name, tool_args)
+            elif tool_name == "init-project":
                 result = await run_init_project()
             elif tool_name == "submit-epic":
                 result = await run_submit_epic(
@@ -1070,7 +1174,8 @@ async def json_rpc_handler(request: JsonRpcRequest):
                 result = await run_code_review(
                     feature_id=tool_args.get("feature_id"),
                     phase_number=tool_args.get("phase_number"),
-                    feature_path=tool_args.get("feature_path")
+                    feature_path=tool_args.get("feature_path"),
+                    delivery_unit_id=tool_args.get("delivery_unit_id")
                 )
             elif tool_name == "complete-feature":
                 result = await run_complete_feature(

@@ -16,12 +16,18 @@ sibling FEATs and design documents are context; their unresolved markers do not
 become target decisions unless the target imports that dependency. Reconcile
 contradictions in the authoritative preparation documents through a question.
 
-Resolve the in-scope product, technical, compatibility, security, ownership,
-edge-case and acceptance decisions needed for deterministic refinement. Do not
-defer them to a future human sign-off or owner-attestation task. An explicitly
-delegated decision needs a deterministic rule, not a later approval gate. Do not
-invent requirements; discover ambiguities in the agreed target and obtain answers.
-Use relevant lessons to avoid repeated mistakes without importing unrelated scope.
+Apply the shared Specification Level Policy (`devcycle-specification-levels/v1`)
+within this host stage and snapshot only. An EPIC interview resolves intent,
+observable behavior, business rules, scope, workflow success criteria, feature
+boundaries and shared constraints needed for decomposition. Named FEAT design
+work may remain open with an owning feature and required milestone; unresolved
+EPIC intent or shared boundaries must still be questioned. FEAT/phase interviews
+resolve the in-scope technical and acceptance decisions needed for their next
+refinement or implementation step, without deferring required decisions to future
+human sign-off or owner attestation. Preserve approved decisions, references and
+rationale; distinguish proposals from constraints. Do not invent requirements.
+Use relevant lessons without importing unrelated scope. This policy grants no
+tools, additional writes, new output fields or changes to the host schemas.
 
 Preserve EPIC -> FEAT -> Phase -> Task acceptance ownership and many-to-many links
 between criteria, tests and code. Phase/FEAT checks may isolate their boundary;

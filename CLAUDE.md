@@ -107,7 +107,7 @@ Client/orchestrator rule:
 
 ## MCP Commands Reference
 
-The DevCycle MCP Server provides 13 commands that guide features through a complete development lifecycle.
+The DevCycle MCP Server provides 16 commands that guide features through a complete development lifecycle.
 
 ### Feature Lifecycle Overview
 
@@ -333,7 +333,7 @@ LLM: Invokes design-feature with feature_id="FEAT-001"
 **What It Does**:
 - Analyzes the full feature folder plus linked epic/dependency context when present
 - Detects project technology stack (framework, lint, tests)
-- Creates phased implementation plan (Phases 0-8)
+- Creates an adaptive phase plan: mandatory Initial Checkpoint, Planning and Final Checkpoint, with only feature-specific implementation phases that have real work
 - Breaks down each phase into independent, testable tasks
 - Creates `FeatureTasks.md` summary
 - Creates individual phase files in `Phases/` folder
@@ -342,17 +342,20 @@ LLM: Invokes design-feature with feature_id="FEAT-001"
 - Moves feature from `01_SUBMITTED` to `02_READY_TO_DEVELOP`
 
 **Phase Structure**:
-| Phase | Name | Purpose |
-|-------|------|---------|
-| 0 | Health Check | Verify build/tests before starting |
-| 1 | Planning & Analysis | Finalize technical approach |
-| 2 | Data Layer | Models, DTOs, schemas |
-| 3 | Business Logic | Services, domain rules |
-| 4 | Presentation Logic | Controllers, handlers |
-| 5 | User Interface | Views, components |
-| 6 | Integration | Wire everything together |
-| 7 | Testing & Polish | End-to-end tests |
-| 8 | Final Checkpoint | Complete verification |
+| Role | Purpose |
+|------|---------|
+| Initial Checkpoint | Establish a green baseline: build with zero errors/warnings, clean configured lint, all required tests passing |
+| Planning | Decide how: affected files and moves, coding guidelines/patterns, relevant lessons learned, dependencies and verification |
+| Feature-specific implementation | Choose concrete deliverables and dependency boundaries; omit empty UI or other layer placeholders |
+| Final Checkpoint | Freshly verify the final integrated source and required acceptance evidence |
+
+The three mandatory roles are separate phases; implementation names/counts vary.
+Record `Phase Role` and dependencies in each phase and the feature summary.
+Every phase uses the same execution loop and independent review/coverage flags.
+Refinement records checks without running them; a green baseline is required
+before Planning or feature implementation. Planning produces the technical how in
+`planning-analysis-report.md` and updates the proposed work when findings warrant it.
+See [Adaptive phase planning](README.md#adaptive-phase-planning).
 
 **Example**:
 ```
@@ -422,11 +425,11 @@ LLM: Invokes start-feature with feature_id="FEAT-001"
 
 **What It Does**:
 - Identifies current state (which phase, which task)
-- During Phase 1, creates or refreshes the canonical feature-level planning document: `planning-analysis-report.md`
+- Tasks explicitly assigned to planning create or refresh the canonical feature-level document: `planning-analysis-report.md`
 - Reads linked epic documents, baselines, related features, and completed feature history to understand dependencies and reuse
 - For each task:
   - Gathers task context and requirements
-  - Reads `planning-analysis-report.md` in Phases 2-8 instead of re-doing phase planning
+  - Reads `planning-analysis-report.md` when the task declares it as an input, instead of re-doing planning
   - Accounts for what is already done and what downstream phases/features will depend on
   - Guides implementation following Gherkin specs
   - Runs build and tests, including downstream-aware regression/contract coverage when needed
@@ -435,7 +438,7 @@ LLM: Invokes start-feature with feature_id="FEAT-001"
 - At phase completion:
   - Validates all git commits are tracked
   - Runs build, tests, and lint
-  - **Invokes `code-review` MCP command** (for code-relevant phases)
+  - **Invokes `code-review` MCP command** when the declared `needCodeReview` flag is true
   - Creates LessonsLearned document
   - Sets phase to AWAITING_USER_ACCEPTANCE
 - In `workflow_mode="autonomous"`, auto-invokes `accept-phase` and continues until `complete-feature`
@@ -477,15 +480,13 @@ LLM: Invokes continue-implementation with feature_id="FEAT-001"
 - Saves report to `code-reviews/phase-{N}/Code-Review-{timestamp}-{STATUS}.md`
 - Updates **Code Review History** table in phase checkpoint
 
-**Phases Requiring Code Review**:
-- Phase 3 (Business Logic) - ALWAYS
-- Phase 4 (Presentation Logic) - ALWAYS
-- Phase 5 (User Interface) - ALWAYS
-- Phase 2, 6, 7 - If contains significant code
-
-**Phases That Skip Code Review**:
-- Phase 0, 1, 8 (no code changes)
-- Phases with only DTOs, config, or documentation
+**Declared Review and Coverage Gates**:
+- Require code review when `needCodeReview` is true; otherwise record justified N/A.
+- Assess meaningful acceptance coverage when `needTestCoverage` is true.
+- The flags are independent; all four combinations are valid.
+- Explicitly required build, lint and test commands still apply when both flags are false.
+- Phase numbers, positions, titles and file categories do not select gates.
+- `start-feature` performs setup and joins the same execution loop as `continue-implementation`.
 
 **Example**:
 ```
@@ -762,3 +763,34 @@ Preserve test/criterion/code links at EPIC, FEAT, Phase and Task levels. Require
 tests are executable quality gates; many-to-many coverage does not waive complete
 workflow E2E proof. A bug is reproduced at the appropriate E2E/TwinTest boundary,
 traced to focused coverage and code, then verified through the affected levels.
+
+## Project PR delivery
+
+Read the source project's `.devcycle/PRPolicy.md` (or its explicitly configured
+path). Refinement creates PRDelivery.md; at each phase entry, evaluate actual
+scope/dependencies/compatibility/review size and record task, grouped-task, phase
+or permitted feature delivery. No repository diff means N/A, not an artificial PR.
+Check the boundary after each task and use the project's publication workflow.
+
+Reuse existing scope and gate declarations, including needCodeReview and
+needTestCoverage when present; PR grouping does not replace them. Optional
+`code-review(..., delivery_unit_id="PRU-01")` reviews only a required production
+review unit and cannot approve the entire phase. Keep every PR in feature records
+and verify due delivery at acceptance/completion. See
+[Project PR Delivery](README.md#project-pr-delivery).
+
+## GitHub synchronization commands
+
+`sync-epic(epic_id, epic_path?, project_path?)`,
+`sync-feature(feature_id, feature_path?, project_path?)`, and
+`refresh-delivery(feature_id, feature_path?, project_path?)` are client-executed
+recipes. Read the source project's `.devcycle/GitHubSync.md` or configured path;
+automatic events are opt-in per project. Local records own planning; GitHub owns
+observed delivery facts. Keep credentials/account selection local. Preserve manual
+issue content and stable mappings; never equate a closed issue or parent-branch
+merge with completed feature acceptance. No watcher or automatic Git merge.
+
+Refinement produces the PR forecast locally before synchronization, including
+per-phase and distinct-unit totals, proposed titles/descriptions and dependencies
+for non-feature delivery. See [GitHub synchronization](README.md#github-synchronization)
+for settings, lifecycle hooks, idempotence and failure semantics.

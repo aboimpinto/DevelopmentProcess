@@ -141,7 +141,14 @@ If the epic has design documents, screen inventories, wireframes, or UX checklis
 
 #### 7.4 Preserve Document Shape
 
-Make targeted edits only. Do not invent large new sections unless the epic already has an obvious place for the information.
+Make targeted edits only. Apply the shared Specification Level Policy: retain
+existing technical decisions, rationale, criterion IDs and links. Summarize new
+feature outcomes and changed shared constraints with references; keep detailed
+implementation plans in the owning FEAT/phase or existing design record. Do not
+automatically remove or relocate technical content from an existing rich EPIC.
+Do not invent large new sections unless the epic already has an obvious place
+for the information. Partial FEAT evidence must not certify full-workflow EPIC
+acceptance; preserve the shared Acceptance Responsibility Policy.
 
 ---
 

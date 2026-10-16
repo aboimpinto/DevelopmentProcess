@@ -43,7 +43,7 @@ This procedure is DONE when:
 - [ ] All tasks in current phase implemented following Gherkin specs
 - [ ] Each task status maintained in real time (PENDING -> IN_PROGRESS -> COMPLETED/SKIPPED)
 - [ ] Required context documents read in order at each task start/resume
-- [ ] Later phases reuse `planning-analysis-report.md` instead of creating new per-phase planning files
+- [ ] Tasks declaring `planning-analysis-report.md` as input reuse it instead of creating new per-phase planning files
 - [ ] Downstream phase/feature dependencies reflected in implementation and test strategy
 - [ ] Git commits tracked in both task-level and phase-level tables
 - [ ] Build: 0 errors, 0 warnings
@@ -153,14 +153,22 @@ From project documentation, identify build, test, and lint commands.
 
 ## Phase 2: State Detection
 
-After workspace preflight/recovery classification, read `FeatureTasks.md` and the current phase file to determine entry point. No table entry bypasses that check:
+After workspace preflight/recovery classification, reconcile the actual phase list,
+roles, dependencies and evidence under Adaptive Feature Phase Planning. Derive the
+current/next phase from that list, not fixed numbers. Initial Checkpoint must pass
+before Planning; the technical plan must be ready before feature implementation;
+Final Checkpoint verifies the integrated result. Each uses this same execution
+loop and its declared tasks/checks. Reconcile legacy plans without inventing
+historical baseline evidence.
+
+Read `FeatureTasks.md` and the current phase file to determine entry point. No table entry bypasses that check:
 
 | Entry Point | Detection | Action |
 |-------------|-----------|--------|
 | **Phase Not Activated** | Current phase status is `PENDING` but this phase is now the active implementation target | Run Phase 2.0 immediately (activate to IN_PROGRESS) |
 | **Fresh Start** | Phase IN_PROGRESS, no tasks started | Start first task |
 | **Mid-Phase** | Some tasks COMPLETED, one IN_PROGRESS | Continue current task |
-| **Checkpoint Pending** | All tasks COMPLETED, checkpoint not filled | Go to Phase 4 |
+| **Checkpoint Pending** | All tasks COMPLETED, checkpoint not filled | Go to Phase 5 |
 | **Validation Failed** | Checkpoint InProgress with failures | Fix issues, re-validate |
 | **Finalization Reconciliation Needed** | Tasks complete + checkpoint complete + review approved + gates pass, but phase/FeatureTasks status not AWAITING_USER_ACCEPTANCE | Run Phase 5.6 immediately |
 | **Awaiting Acceptance** | Phase AWAITING_USER_ACCEPTANCE | Invoke `accept-phase` immediately with the selected workflow mode after its preconditions pass. |
@@ -191,6 +199,17 @@ Rules:
 6. If phase file shows `PENDING` while any task is `IN_PROGRESS` or `COMPLETED`, immediately repair status to `IN_PROGRESS` in both files.
 
 If phase status differs between files, fix both immediately before continuing.
+
+### 2.1a PR Decision (Before Implementation)
+
+Read the project policy and `PRDelivery.md`. Evaluate actual tasks for cohesion,
+provider/consumer dependencies, compatibility, scope and review size. Record
+the effective `PR Boundary` and `PR Decision Basis` in the phase file. Reuse
+existing scope, review and coverage declarations; do not redefine those gates.
+Link unit task membership, planned bases, validation and rationale in PRDelivery.md.
+No phase number/name selects a PR boundary.
+On resume, reconcile actual branches/PRs and policy changes before any new work.
+This check also applies to finalization-only mode; it must not bypass due PRs.
 
 ### 2.2 Optional Mode Override
 
@@ -327,7 +346,10 @@ Create or update the feature-root file `planning-analysis-report.md` with:
 - Parent epic context and baseline constraints (if linked)
 - Upstream/downstream dependency map across related features
 - Implementation type distribution table
-- Key patterns identified with sources
+- Exact file changes, including old/new paths for moves and create/modify/delete actions
+- Key patterns identified with coding-guideline and example-file sources
+- Relevant lessons learned, prior traps and how this approach avoids them
+- Validated implementation phase structure and any recorded task/dependency revisions
 - Phase-by-phase implementation guidance table
 - Downstream dependency obligations table for later phases/features
 - Test strategy for current work, regression coverage, and reusable contracts/artifacts
@@ -335,6 +357,7 @@ Create or update the feature-root file `planning-analysis-report.md` with:
 - Dependencies identified
 - Tasks enriched summary
 - Estimated impact on timeline
+- Link to PRDelivery.md and effective project policy; do not duplicate its ledger
 
 The phase-by-phase implementation guidance table must cover, at minimum:
 - Phase number and name
@@ -369,9 +392,9 @@ For each task in the current phase:
 ### 4.1 Start Task
 
 Choose the next task deterministically before changing its status:
-- Continue the task already marked `[IN_PROGRESS]`, OR
-- Start the first task marked `[PENDING]` in declared order.
-- If neither exists, proceed to Phase 5 and execute the declared phase gates.
+- Continue the task already marked `[IN_PROGRESS]`, preserving its recorded unit.
+- Otherwise start the first dependency-ready `[PENDING]` task in declared order within the current unit (or a recorded no-PR task). Satisfy the prior PR boundary before changing units.
+- If neither exists and all tasks are completed or validly skipped, proceed to Phase 5 and execute the declared phase gates. Otherwise resolve the unmet dependency before proceeding.
 
 For a newly selected pending task, update status before writing code:
 ```markdown
@@ -426,6 +449,9 @@ Implementation notes:
   - what later phases/features depend on these outputs
   - what tests cover both current behavior and downstream contract safety
 
+Read the effective source project PR policy and PRDelivery.md for current unit
+membership, branch/base, required reviews and publication/merge conditions.
+
 ### 4.3 Implement
 
 Apply Required Dependency Order before writing consumer code: all prerequisites
@@ -438,9 +464,10 @@ Follow the Gherkin behavior specs (Given/When/Then):
 2. Write corresponding unit tests plus any required regression/contract tests for downstream phase or feature consumers
 3. Run build → fix errors
 4. Run tests → fix failures
-5. Commit changes
+5. Commit a meaningful bounded change under the project policy. Several tasks
+   in one unit may share a commit; do not force one commit per task.
 
-**Commit format**:
+**Commit format** (use the repository-required template when present):
 ```
 feat({feature_id}): {task description}
 
@@ -494,7 +521,9 @@ When implementation/tests for this task are finished, update status immediately:
 **Actual Duration**: {duration}
 ```
 
-Verify Git Commits table has entries before marking complete.
+Record commit references when committed, or the current unit and pending commit
+boundary when tasks share a commit. Record N/A with evidence for work without a
+repository diff. Task implementation complete does not mean delivery merged.
 
 If task is intentionally not implemented, mark:
 ```markdown
@@ -503,15 +532,31 @@ If task is intentionally not implemented, mark:
 **Skip Date**: {timestamp}
 ```
 
-### 4.7 Next Task
+### 4.7 Mandatory PR Boundary Check
+
+Apply the shared Project PR Delivery Policy after every completed task, before
+starting another. Reconcile the recorded unit/branch/PR. If the unit is complete,
+finish its checks and any required scoped review (`delivery_unit_id`), announce
+READY_FOR_PR, and use the project's publication workflow within authorization.
+If this ends the phase, run its required phase-end gates/review before publication.
+Record PR URL/state and merge evidence; do not create a duplicate on resume.
+Select the next dependency-ready task according to the project branching policy.
+With stacked PRs, continue on a new child branch from the published predecessor
+head while review is pending; record its base SHA and predecessor PR. Wait only
+when a required capability/gate is missing or the project explicitly requires merge.
+Reconcile/restack descendants after upstream fixes or merges before further work.
+A grouped unit continues until its listed tasks are complete. No diff means N/A.
+
+- More permitted tasks remain → loop to 4.1
+- All tasks complete → proceed to Phase 5 (which also rechecks due delivery)
 
 This is an execution handoff in the current session, not a reporting endpoint.
 After recording each commit, task result or progress update:
 
 1. If the current task still has unfinished deliverables or required evidence,
    continue that task now. Do not skip ahead or label partial work completed.
-2. Otherwise, record its completion, select the first pending task in declared
-   order, and execute 4.1–4.6 for that task immediately using your local tools.
+2. Otherwise, record its completion, satisfy the PR boundary and select the first dependency-ready pending task
+   in declared order within the permitted unit, and execute 4.1–4.6 for that task immediately using your local tools.
 3. If all tasks are completed or validly skipped, execute Phase 5's declared gates,
    repair in-scope failures, and perform the acceptance handoff. In autonomous mode,
    continue with the next phase after acceptance; in single_phase mode, stop only
@@ -533,11 +578,12 @@ the concrete inability to proceed under the shared Client execution loop.
 Verify ALL commits documented:
 - Every task with code changes has commits in its table
 - Phase Summary contains ALL commits from ALL tasks
-- Commit count is reasonable (5 tasks ≈ 5+ commits)
+- Use as few meaningful commits as practical within repository limits; map shared
+  commits to every task they implement. No commit-count minimum per task.
 
 ### 5.2 Evaluate Declared Quality Gates
 
-Read the phase.gates record and ordered task contract. Reuse passing evidence for unchanged inputs. Execute only missing, invalidated or explicitly fresh required checks. The following rows are examples to populate from declared commands, not universal obligations; include each assigned test boundary and any explicit health checks. Assess acceptance coverage when needTestCoverage is true.
+Read the phase.gates record and ordered task contract. Reuse passing evidence for unchanged inputs. Execute only missing, invalidated or explicitly fresh required checks. The Initial Checkpoint requires actual baseline execution before feature work; the Final Checkpoint explicitly requires fresh full project verification after implementation. Neither can be satisfied by focused development runs or report rewrites. The following rows are examples to populate from declared commands, not universal obligations; include each assigned test boundary and any explicit health checks. Assess acceptance coverage when needTestCoverage is true.
 
 | Gate | Command | Expected |
 |------|---------|----------|
@@ -613,6 +659,7 @@ After Phase 5.1-5.5 checks pass, enforce final status synchronization:
    - checkpoint is `Complete`
    - latest code review is `APPROVED` or `APPROVED_WITH_NOTES` (if required)
    - all explicitly required commands pass and required acceptance coverage is sufficient
+   - units due at this boundary satisfy project PR/merge conditions, with evidence
 2. If all conditions pass:
    - set phase file status to `AWAITING_USER_ACCEPTANCE`
    - set `FeatureTasks.md` phase row status to `AWAITING_USER_ACCEPTANCE`

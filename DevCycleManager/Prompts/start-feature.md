@@ -45,6 +45,7 @@ This procedure is DONE when:
 - [ ] FeatureDescription.md updated with state change
 - [ ] Parent epic updated and all current status views reconciled (if linked)
 - [ ] Startup changes finalized after the report; authorized commits recorded where applicable and clean code handoff verified
+- [ ] External/no-diff records use N/A; no artificial source commit or PR
 - [ ] Success report saved as `start-feature-report-{timestamp}.md`
 - [ ] Handoff to `continue-implementation` initiated with the selected workflow mode (`autonomous` or `single_phase`)
 
@@ -94,7 +95,7 @@ path is established. Keep an external MemoryBank outside the source repository.
 |---------------|----------|
 | `FeatureDescription.md` | Yes |
 | `FeatureTasks.md` | Yes |
-| `Phases/` (with at least one phase file) | Yes |
+| `Phases/` (required Initial Checkpoint, Planning and Final Checkpoint roles plus relevant implementation phases) | Yes |
 
 **If not found** → Stop: "Feature {{feature_id}} not found in 02_READY_TO_DEVELOP."
 
@@ -103,7 +104,10 @@ path is established. Keep an external MemoryBank outside the source repository.
 ## Phase 2: Pre-Validation (STRICT — Rejects on Failure)
 
 Execute the included **Shared Feature Readiness Gate**, R1–R6. It is the same
-standard refinement must pass before declaring READY.
+standard refinement must pass before declaring READY. Verify the adaptive phase
+roles, dependency order and explicit baseline/final checks. Readiness validates the
+plan; the common implementation loop must actually execute the Initial Checkpoint
+and establish a green baseline before entering Planning or feature implementation.
 
 Read `readiness-validation.md` if present and verify it against current inputs.
 Generate missing evidence for older features. Repair routine technical or
@@ -188,10 +192,12 @@ Generate summary listing all validations performed, auto-fixes applied, warnings
 
 ## Phase 4: Confirm Feature Worktree
 
-1. Use the code repository identified by Workspace Preflight; never switch another checkout.
-2. Confirm the feature worktree/branch established during Workspace Preflight. Verify its identity and account for only the authorized setup edits made since the recorded clean baseline; do not create a new branch carrying those edits now.
+1. Use the code repository identified by Workspace Preflight; never switch another checkout. Read its PR policy and revalidate `PRDelivery.md`.
+2. Confirm the worktree/branch established during Workspace Preflight. Verify its identity and account for only the authorized setup edits made since the recorded clean baseline; do not create a new branch carrying those edits now. Preserve unrelated work; never reuse an unrelated or already-merged feature branch.
 3. Verify the selected worktree belongs to `{{feature_id}}` and contains no unaccounted changes before the lifecycle move. The final startup clean check occurs after all owned setup edits and reports have been finalized.
-4. If the project explicitly does not use Git, record N/A; otherwise Git failures block setup.
+4. Before source implementation, finalize the current phase's PR decision and create/reuse the recorded current unit branch from its verified base in the authorized worktree. Follow project naming, identity, branching policy and publication workflow. A stacked dependent unit starts from its verified predecessor's published head and targets that branch; it does not always start from main or wait for prerequisite merge.
+5. Analysis/evidence work with no repository diff needs no artificial branch, commit or PR. An external MemoryBank is not staged in the source repository. Record the current branch per unit; one feature may use multiple branches.
+6. If the project explicitly does not use Git, record N/A; otherwise Git failures block setup.
 
 ---
 
@@ -252,6 +258,9 @@ in the external documentation owner's repository. Prepare the startup commit
 summary now, but finalize Git after saving the Phase 8 report so the report cannot
 leave a newly dirty checkout after a supposedly clean handoff.
 
+External MemoryBank updates need no source commit/push. Follow project delivery
+policy and existing authorization; do not manufacture a lifecycle-only source PR.
+
 ---
 
 ## Phase 8: Generate Success Report
@@ -262,7 +271,7 @@ Save to `03_IN_PROGRESS/{folder}/start-feature-report-{timestamp}.md` containing
 - Feature summary table (ID, name, state, branch, phases, tasks, estimates)
 - File tree of the feature folder
 - Epic status (if linked)
-- Next steps: start with the declared initial checkpoint, work phases sequentially, track time and apply clean handoffs
+- Next steps: start with the declared initial checkpoint, follow phase dependencies, evaluate PR grouping before implementation, track time and meaningful commits, check PR readiness after each task and apply clean handoffs
 
 ### 8.1 Clean Startup Handoff
 

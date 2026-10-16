@@ -152,15 +152,17 @@ not phase-number exceptions. The same conditions apply to any phase identifier.
 | --- | --- | --- | --- |
 | Planning/documentation only | false | false | Validate the required documents, decisions, references and task/criterion ownership. No invented test or code-review loop. |
 | Initial checkpoint only | false | false | Execute the explicitly declared baseline health checks; record observed results without authoring tests or production changes. |
-| Final checkpoint only | false | false | Execute or reuse the declared final checks and reconcile earlier acceptance evidence. Do not reopen production review or create another coverage-authoring loop for unchanged work. |
+| Final checkpoint only | false | false | Execute the declared fresh final build/test checks and reconcile earlier acceptance evidence. Do not reopen production review or create another coverage-authoring loop for unchanged work. |
 | Test-only work | false | Explicit assigned production-behavior assessment only | Execute the declared tests and evaluate their meaningful assertions. No coverage of test code or production-code review of test files. |
 | Production or explicitly mixed implementation | Independent scope decision | Independent scope decision | Name the production review scope and the behavior that needs testing; do not infer one flag from the other. |
 
 Do not place executable fixture capture, test harness creation, test implementation
 or production edits inside a planning/documentation-only phase. Plan that work
 there, then assign its execution to a named implementation or test-only owner
-before any change that depends on it. Keep checkpoint repairs in the responsible
-implementation/test task; a real failure must be repaired, not relabelled N/A.
+before any change that depends on it. Keep checkpoint repairs in a responsible
+repair task with explicit scope and applicable gates; a real failure must be
+repaired, not relabelled N/A. Baseline repairs belong before baseline acceptance,
+not in a later feature implementation phase that depends on that baseline.
 If accepted scope intentionally adds production changes, first revise the phase's
 deliverables, task ownership and independent flags with a recorded reason.
 

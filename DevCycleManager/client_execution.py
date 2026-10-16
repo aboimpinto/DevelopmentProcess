@@ -20,9 +20,12 @@ You, the calling coding agent, own execution through the selected completion bou
    progress report, passing subset or IN_PROGRESS task is not a stopping point.
    After every commit and evidence update, read the current task's remaining
    deliverables. If unfinished, keep it IN_PROGRESS and execute its next operation.
-   If finished and verified, record completion and immediately select the first
-   pending task in declared order, mark it IN_PROGRESS and execute it in this same
-   session. If no tasks remain, execute the phase gates. Do not end the turn or
+   If finished and verified, record completion, satisfy the project's PR boundary
+   and select the first dependency-ready pending task in declared order within the
+   permitted delivery unit. Reconcile PRDelivery.md and the recorded branch before
+   changing units; execute any due checks, review and authorized publication.
+   Mark the selected task IN_PROGRESS and execute it in this same session.
+   If no tasks remain, execute the phase gates. Do not end the turn or
    ask the user to send another continue command at a task boundary.
 3. Execute the phase's declared checks and applicable review/coverage assessment.
    Unfinished tasks, missing evidence, failing tests and review findings block
@@ -95,8 +98,9 @@ def bind_client_execution(result: dict, tool_name: str) -> dict:
         "and failed gates require continued work, not a partial final answer. Stop only "
         "at the selected completion boundary or a documented inability to proceed, "
         "cancellation or explicit user pause. After each commit, continue the unfinished "
-        "task; after task completion, immediately execute the next pending task in the "
-        "same session; after the last task, execute the declared phase gates. "
+        "task; after task completion, satisfy the project's PR boundary and execute "
+        "the next dependency-ready task in the permitted delivery unit in the same "
+        "session; after the last task, execute the declared phase gates. "
         "Do not ask for another continue command or return a final summary while "
         "ordinary work remains. Work one bounded operation at a time; the whole "
         "feature need not fit in one response or context window. Never infer an "

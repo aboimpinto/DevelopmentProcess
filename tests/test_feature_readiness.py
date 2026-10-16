@@ -60,10 +60,9 @@ class FeatureReadinessTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_missing_shared_gate_cannot_silently_bypass_validation(self):
         with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            (root / "dependency-order.md").write_text("DEPENDENCY_POLICY")
-            for name in ("refine-feature.md", "start-feature.md"):
-                (root / name).write_text((main.PROMPTS_DIR / name).read_text())
+            root = Path(temp) / "Prompts"
+            shutil.copytree(main.PROMPTS_DIR, root)
+            (root / "feature-readiness.md").unlink()
             with patch.object(main, "PROMPTS_DIR", root):
                 for tool in ("refine-feature", "start-feature"):
                     response = await self.call(tool)
