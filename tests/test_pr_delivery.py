@@ -66,6 +66,105 @@ class PRDeliveryTests(unittest.IsolatedAsyncioTestCase):
                     self.assertIn("satisfy the project's PR boundary", payload["client_directive"])
                     self.assertIn("dependency-ready task", payload["client_directive"])
 
+    async def test_refinement_boundaries_distinguish_estimates_limits_and_staging(self):
+        _, payload = await self.call("refine-feature")
+        instructions = " ".join(payload["instructions"].split())
+        # These are client decision contracts delivered over JSON-RPC, not a
+        # simulated planner or proof that a client has executed the decisions.
+        for rule in (
+            "Earlier predicted PR counts and approval of functional scope do not impose a maximum PR count",
+            "Preserve an explicit user requirement that actually sets a hard limit",
+            "record its source, exact limit and scope separately from the forecast",
+            "Prefer small task-level or coherent task-group PRs",
+            "it may produce zero, one or several PRs",
+            "Group across phases only for a concrete compatibility or cohesion reason",
+            "purpose, included tasks, affected consumers",
+            "required tests/docs and why its resulting tree is safe to merge after its prerequisites",
+            "Keep PR grouping separate from commit feasibility",
+            "record the exact blocked unit/task, violated limit",
+            "whether independent work can proceed under the existing readiness/start gates",
+            "If a feature-wide readiness gate still blocks all implementation, name that gate",
+            "R6 distinguishes revisable PR estimates from explicit user hard limits",
+            "Only PASS permits a READY claim or progression to implementation",
+        ):
+            with self.subTest(rule=rule):
+                self.assertIn(rule, instructions)
+
+    async def test_refinement_templates_record_boundaries_and_forecast_reconciliation(self):
+        _, payload = await self.call("refine-feature")
+        instructions = payload["instructions"]
+        phase_template = instructions.split("### Phase File Template", 1)[1].split(
+            "## Phase 4: Create FeatureTasks.md", 1)[0]
+        for field in ("PR Boundary", "PR Decision Basis", "PR Forecast",
+                      "Publication / Continuation", "Commit Feasibility"):
+            self.assertIn(f"**{field}**:", phase_template)
+        feature_template = instructions.split("## Phase 4: Create FeatureTasks.md", 1)[1].split(
+            "## PR Delivery Plan", 1)[0]
+        for field in ("Earlier Estimate / Revision", "Explicit Hard Limit",
+                      "Feature Total / Unopened / Actual PRs", "Parent EPIC Forecast",
+                      "Boundary Explanations", "Publication Sequence", "Synchronization"):
+            self.assertIn(f"**{field}**:", feature_template)
+        normalized = " ".join(instructions.split())
+        for rule in (
+            "Record old-to-new unit mappings, date and reason",
+            "retain superseded units as history, excluded from current totals",
+            "Recompute the parent total from distinct feature/unit pairs",
+            "preserving unrelated sibling forecasts and states",
+            "invoke sync-feature, then sync-epic if linked parent totals changed",
+            "publish actual readiness and superseded-unit history without claiming READY",
+        ):
+            self.assertIn(rule, normalized)
+
+    async def test_stacked_continuation_and_final_checkpoint_keep_quality_gates(self):
+        for tool in ("refine-feature", "continue-implementation", "accept-phase", "complete-feature"):
+            with self.subTest(tool=tool):
+                _, payload = await self.call(tool)
+                instructions = " ".join(payload["instructions"].split())
+                for rule in (
+                    "Use stacked delivery as the normal option for dependent improvements",
+                    "a dependent unit branches from its predecessor's published, PR-stamped head and targets that predecessor branch",
+                    "An open PR alone is neither a blocker nor proof of dependency availability",
+                    "Do not defer completed earlier units' publication to the final checkpoint",
+                    "This checkpoint reconciles existing delivery records and creates no extra aggregate PR",
+                    "If a project explicitly requires merged prerequisites instead, honor that rule",
+                    "rerun affected validation and review",
+                    "Do not merge a child into an unmerged predecessor to declare it delivered",
+                    "verify all project-required merges through to the final delivery branch",
+                    "It never overrides compatibility, testing, review, account or merge requirements",
+                ):
+                    self.assertIn(rule, instructions)
+
+    async def test_pex_feat003_example_delivers_three_justified_units_and_no_checkpoint_prs(self):
+        _, payload = await self.call("refine-feature", {"feature_id": "FEAT-003"})
+        example = payload["instructions"].split(
+            "### Regression example: PEX-Prod FEAT-003", 1)[1].split(
+            "## Phase 4.5:", 1)[0]
+        rows = [
+            [cell.strip() for cell in line.strip("|").split("|")]
+            for line in example.splitlines() if line.startswith("| P") and not line.startswith("| Phase")
+        ]
+        self.assertEqual([f"P{i}" for i in range(6)], [row[0] for row in rows])
+        self.assertEqual([0, 0, 1, 1, 1, 0], [int(row[5]) for row in rows])
+        self.assertEqual(3, sum(int(row[5]) for row in rows))
+        units = rows[2:5]
+        self.assertEqual(["E004-PR01A", "E004-PR01B", "E004-PR01C"], [row[1] for row in units])
+        self.assertEqual(["none", "E004-PR01A", "E004-PR01B"], [row[4] for row in units])
+        for row, task, behavior in zip(units, ("F003-T21", "F003-T31", "F003-T41"),
+                                       ("denial assertions", "SQLite still works", "retained-state compatibility")):
+            self.assertIn(task, row[2])
+            self.assertIn(behavior, row[3])
+            self.assertIn("rules/docs", row[3])
+        normalized = " ".join(example.split())
+        for rule in (
+            "superseded E004-PR01 remains history and is not a fourth unit",
+            "the parent EPIC forecast becomes six",
+            "no predecessor merge is required before dependent implementation",
+            "Publication does not wait for P5",
+            "F003-B01 concerns C's SQLite commit staging",
+            "retain the recorded feature-wide R6 readiness block until lawfully resolved",
+        ):
+            self.assertIn(rule, normalized)
+
     async def test_missing_or_empty_policy_blocks_affected_recipes_only(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp) / "Prompts"

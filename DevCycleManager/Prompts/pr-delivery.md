@@ -34,6 +34,13 @@ Supported project preferences are a default boundary (`task`, `phase` or
 branching mode (`stacked` or merged-prerequisite), dependency/merge rules, publication command, quality gates and reviewer context.
 They are readable instructions, not a new machine-parsed settings API. Do not
 invent mandatory numeric PR limits. Respect existing per-commit/file limits.
+Use stacked delivery as the normal option for dependent improvements unless an
+explicit project/user rule requires merged prerequisites. Earlier predicted PR
+counts and approval of functional scope do not impose a maximum PR count. Preserve
+an explicit user requirement that actually sets a hard limit; record its source,
+exact limit and scope separately from the forecast. If safe units cannot fit that
+limit, report the conflict rather than silently exceeding it or combining unsafe
+scopes. A changed estimate alone needs no renewed scope approval.
 
 ## Delivery properties and existing gates
 
@@ -60,6 +67,14 @@ and public contract changes, runtime prerequisites, tests and documentation.
 Record provider-before-consumer edges at task and PR-unit level, including
 cross-phase dependencies. A unit is one independently reviewable improvement,
 possibly including its separately tracked test/documentation tasks.
+Prefer small task-level or coherent task-group PRs. Evaluate each phase's actual
+work: it may produce zero, one or several PRs. Group across phases only for a
+concrete compatibility or cohesion reason, recorded against the member tasks;
+neither consecutive phase numbers nor an earlier PR estimate is such a reason.
+For every proposed boundary, explain its purpose, included tasks, affected
+consumers (or an evidenced none), dependencies, required tests/docs and why its
+resulting tree is safe to merge after its prerequisites. A dependent unit can be
+independently reviewed without being independent of its predecessor's code.
 
 Do not force a breaking model change into a separately named phase merely because
 of its label. Choose either a backward-compatible foundation followed by a
@@ -112,6 +127,29 @@ After successful refinement, configured sync-feature publishes this local plan
 to the existing issue. Publication later replaces the planned entry with the real
 PR link while preserving its unit ID, title/intent and history.
 
+### Revised forecasts and commit feasibility
+
+Keep PR grouping separate from commit feasibility. Splitting a PR does not waive
+per-commit path/line/file-size limits, compiling intermediate commits or required
+hooks. For a staging problem, record the exact blocked unit/task, violated limit,
+evidence, proposed lawful staging and any unresolved authority. Check dependency
+edges to identify which consumers are blocked and whether independent work can
+proceed under the existing readiness/start gates. Do not use a unit-local staging
+problem as a reason to combine unrelated scopes. If a feature-wide readiness gate
+still blocks all implementation, name that gate and explain why; do not silently
+waive it, mark READY or imply that every unit has the same technical problem.
+
+When units split or regroup, reconcile phase records, FeatureTasks.md,
+FeatureDescription.md, PRDelivery.md and parent EPIC delivery totals together.
+Preserve task/criterion/test links, one counting owner per active unit and actual
+PR identities. Record old-to-new unit mappings, date and reason; retain superseded
+units as history, excluded from current totals. Recompute the parent total from
+distinct feature/unit pairs, preserving unrelated sibling forecasts and states.
+Show total, unopened remainder and actual PRs separately; do not count a superseded
+aggregate as another unit. Reconcile configured GitHub synchronization for both
+feature and parent forecasts, or record disabled/SYNC_PENDING with the exact reason.
+Revised planning does not by itself change readiness or imply implementation.
+
 ## Phase entry: decide grouping from the actual work
 
 Before task execution in each phase, evaluate the default boundary
@@ -151,6 +189,18 @@ Keep one row per unit, using stable IDs such as `PRU-01` (not invented GitHub ID
 | Unit | Tasks / phase | Improvement and grouping rationale | Depends on | Compatibility and validation | Branch / base SHA / tested head | Review evidence | PR / state / merge evidence |
 |---|---|---|---|---|---|---|---|
 | PRU-01 | Actual task IDs | One observable improvement | Unit IDs or none | Required checks and actual results | Actual refs and exact base SHA when known | Report for tested revision | Actual URL/state or not opened |
+
+For each proposed unit also retain this boundary explanation (link detailed
+inventories rather than duplicating them):
+
+| Boundary property | Required record |
+| --- | --- |
+| Purpose and scope | Proposed title/description, member task IDs and affected files/artifacts |
+| Consumers and cohesion | Affected consumers, why these tasks belong together, concrete reason for any cross-phase grouping |
+| Dependencies and safe tree | Predecessor units, inherited requirements, compatibility strategy and why the resulting tree is safe after prerequisites |
+| Tests/docs and gates | Required tests, documentation and scoped review; execution owner and actual evidence when available |
+| Publication and continuation | Publish at this unit's gates; next unit's separate branch and intended PR base |
+| Commit feasibility | Applicable limits, staging plan or exact blocker, independent-work assessment and any feature-wide gate |
 
 For stacks also record stack ID/order, predecessor unit/PR, current PR base branch
 and SHA, intended final merge destination, last published head and restack status.
@@ -245,6 +295,11 @@ phase acceptance does not wait for all mainline merges unless that boundary
 explicitly requires them; keep accepted implementation and pending delivery distinct.
 An explicitly planned
 later boundary may remain pending, clearly recorded; it is not merged delivery.
+Final checkpoints reconcile integrated verification and existing delivery records.
+Do not defer completed earlier units' publication to the final checkpoint or create
+an extra aggregate PR. Keep fresh integrated checks and required final merges as
+completion obligations; they do not impose a blanket publication wait on units
+whose own applicable gates pass.
 Do not open an additional aggregate phase PR over already delivered task PRs.
 At feature completion, reconcile every unit and PR with hosting evidence and
 verify all project-required merges through to the final delivery branch. A child

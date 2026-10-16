@@ -137,7 +137,13 @@ Options:
 
 For each feature (in dependency order):
 
-1. Compose description from: User Story + Scope + Epic context (Problem Statement, Success Criteria)
+1. Compose description from: User Story + Scope + Epic context (Problem Statement, Success Criteria).
+   Carry forward stable parent criterion IDs, approved constraints, decision
+   rationale/references and named design work assigned to this feature. Describe
+   its independently verifiable outcome and actual prerequisites. Keep proposals
+   distinct from approved decisions; link existing technical detail instead of
+   duplicating the entire EPIC appendix. Do not require a complete implementation
+   design before creating a submitted feature.
 2. Call `submit-feature` MCP command with `description`, `title`, and `epic_id={{epic_id}}`
 3. Track assigned FEAT-XXX ID; map title to ID for downstream dependency resolution
 4. Wait for completion before creating dependent features

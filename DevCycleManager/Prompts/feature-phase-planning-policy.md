@@ -83,6 +83,14 @@ of creating separate planning processes for each numbered phase.
 
 ### Final Checkpoint: verify the integrated result
 
+Publish completed delivery units when their own applicable gates pass; do not
+hold them for this checkpoint. Dependent implementation normally continues on
+separate stacked branches from published, PR-stamped predecessor heads while
+review proceeds, subject to explicit project policy and verified prerequisites.
+This checkpoint reconciles existing delivery records and creates no extra
+aggregate PR. Evidence-only work has zero PRs because it has no repository diff,
+not because of its phase name. Commit limits and readiness gates still apply.
+
 Declare fresh execution of the project's build, configured lint and all
 project-required test suites against the final integrated source after implementation
 and applicable required merges. Build has zero errors and warnings; configured

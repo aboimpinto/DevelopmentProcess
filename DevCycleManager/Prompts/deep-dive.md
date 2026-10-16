@@ -51,11 +51,25 @@ You are a **Technical Interviewer** — relentlessly thorough, adaptive, and det
 
 ## Downstream Decision-Closure Contract
 
-- Deep-Dive must resolve every in-scope product, technical, security, ownership, compatibility, and acceptance decision needed for deterministic refinement and implementation.
-- It **must not defer an implementation decision** to a future developer, owner-attestation task, CODEOWNER approval task, human sign-off, or manual phase-acceptance prompt.
-- Ask the necessary question now, record the answer as an authoritative target-file decision, and probe until the decision has implementable boundaries and acceptance behavior.
-- Deep-Dive may complete only when the target can be refined into tasks that an autonomous developer can finish using repository evidence and configured automated review/quality gates.
-- If the user explicitly delegates a class of decisions to the autonomous developer, record that delegation and the deterministic decision rule the developer must use; do not create a future approval gate.
+Apply the shared Specification Level Policy (`devcycle-specification-levels/v1`).
+Identify the target level before deciding what must be resolved.
+
+- For an EPIC, resolve intent, users, observable behavior, business rules, scope,
+  success criteria, feature boundaries and cross-feature dependencies sufficiently
+  for decomposition. Record approved shared constraints and their rationale.
+- An EPIC may complete its interview with named FEAT-level design work still open.
+  Assign that work to a proposed feature (no invented FEAT ID), with the decision
+  to resolve and the milestone before which it is needed. Missing product intent
+  or a shared boundary that changes decomposition remains an EPIC question.
+- For a FEAT or phase, resolve the in-scope product, technical, security,
+  compatibility and acceptance decisions needed for its next refinement or
+  implementation step. It **must not defer an implementation decision** required
+  for that step to a future owner-attestation, CODEOWNER approval or human sign-off.
+- Ask about genuinely unresolved decisions at the target's level. Use repository
+  evidence for ordinary engineering choices; do not invent product requirements.
+  Explicitly delegated decisions retain their constraints and decision rule.
+- Interview completion is readiness for the target's next planning step, never
+  implementation acceptance. Preserve the selected mode and mutation boundary.
 
 ---
 
@@ -68,7 +82,7 @@ This procedure is DONE when:
 - [ ] Targeted mode: only supplied focus questions and necessary dependent follow-ups resolved
 - [ ] Completed decisions were reused rather than reopened
 - [ ] No vague or ambiguous in-scope answers remain except explicit validation markers
-- [ ] No implementation decision is deferred to human sign-off, owner attestation, CODEOWNER approval, or manual acceptance
+- [ ] Decisions required at the target level are resolved; named FEAT design work is distinguished from unresolved EPIC intent
 - [ ] Adaptive interview: only the target file updated, with existing content preserved
 - [ ] Question manifest: every currently identifiable question and option returned together, with no file mutation
 - [ ] Structured completion summary or question manifest presented
@@ -243,7 +257,7 @@ Use this phase only in `comprehensive` mode. Select exactly one matching checkli
 - [ ] Cost/risk of NOT doing this; external timeline drivers
 
 **Features Breakdown:**
-- [ ] Each feature truly independent and valuable on its own
+- [ ] Each feature has a bounded outcome and independently verifiable acceptance at its boundary; real prerequisites are explicit
 - [ ] Correct dependency ordering; missing or oversized features
 - [ ] Features that belong in a different/future epic
 
@@ -251,6 +265,11 @@ Use this phase only in `comprehensive` mode. Select exactly one matching checkli
 - [ ] Inter-feature dependencies explicit in diagram
 - [ ] External dependencies (teams, systems, vendors)
 - [ ] Highest-risk features with mitigation strategies
+
+**Business Rules and Shared Constraints:**
+- [ ] Observable workflow behavior, important failure outcomes and scope boundaries
+- [ ] Approved constraints distinguished from proposed mechanisms; rationale and references retained
+- [ ] Remaining FEAT design work assigned to a named feature and required milestone
 
 **Success Criteria:**
 - [ ] Each criterion specific, measurable, with defined measurement method

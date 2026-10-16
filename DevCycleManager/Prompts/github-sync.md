@@ -99,7 +99,8 @@ silently truncate delivery rows or invent PR numbers to fill a forecast.
 | Boundary | Client action and order |
 | --- | --- |
 | create-epic-features finished, all local FEATs defined | Invoke sync-epic; use existing feature IDs. An epic already fully defined may be synced explicitly without recreating features |
-| refine-feature gate passed and final local records reconciled | Invoke sync-feature with the completed phase/PR forecast. A missing issue is reported; sync-feature never creates it |
+| refine-feature gate passed and final local records reconciled | Invoke sync-feature with the completed phase/PR forecast, then sync-epic if the parent forecast changed. A missing issue is reported; sync-feature never creates it |
+| Revised delivery forecast reconciled locally, including a refinement still BLOCKED | When refinement synchronization is enabled, invoke sync-feature, then sync-epic if linked parent totals changed; publish actual readiness and superseded-unit history without claiming READY. Respect disabled events; record SYNC_PENDING for failures |
 | A real PR was published at its delivery gate | Save its URL/number and feature/unit mapping locally first, then immediately invoke sync-feature to add the actual link and Open/Draft status to the same issue-table row, before continuing to the next unit. Do not wait for merge or phase completion |
 | start-feature, continue-implementation resume, accept-phase or complete-feature before delivery-dependent decisions | Invoke refresh-delivery for mapped PRs; it updates local observations and then the existing feature issue table. Do not separately repeat sync-feature or infer merge from stale local records |
 | After accepted phase or completed feature records are finalized | Invoke sync-feature, then sync-epic when a linked epic's progress changed; keep local acceptance and remote facts distinct |

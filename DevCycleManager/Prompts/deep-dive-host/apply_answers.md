@@ -9,7 +9,8 @@ explain an answer but cannot override it or independently add requirements.
 Resolve validation markers using the saved decisions. Remove a resolved marker
 entirely; do not reintroduce its literal token in explanatory status prose. Leave
 unresolved decisions visible rather than claiming readiness. Express decisions
-with implementable boundaries and acceptance behavior. Preserve explicit
+with boundaries and acceptance behavior appropriate to the target level:
+EPIC decomposition readiness or FEAT/phase implementation readiness. Preserve explicit
 delegation rules, and do not add future human approval or manual phase gates.
 Return scoped exact edits: `before` is a nonempty verbatim excerpt that occurs
 exactly once in the supplied target; `after` is its replacement. Include enough

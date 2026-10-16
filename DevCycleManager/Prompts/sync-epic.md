@@ -34,6 +34,13 @@ policy. This command publishes the hierarchy, not a new refinement or implementa
    phases/PR rows already published by sync-feature. When such rows exist, render
    them from the same current PRDelivery.md plan, or preserve them if no plan is
    available; never downgrade detailed planning to the initial issue scaffold.
+   Recompute the epic PR forecast from distinct active feature/unit pairs, including
+   published/merged units once and showing unopened remainder separately. Preserve
+   unrelated sibling estimates; unknown remains unknown. Record revised estimates
+   and explicit hard limits separately. Keep superseded units and replacement
+   mappings in history, excluded from current totals; a revised count does not
+   change a feature's readiness. Use the same totals as the local epic and feature
+   delivery records, including when refinement remains BLOCKED.
 6. Read back all changed bodies and hierarchy links. Record per-entity results
    and partial failures in GitHubSync.md beside the local epic, saving canonical
    links in each child's records too. Report created/updated/unchanged counts and

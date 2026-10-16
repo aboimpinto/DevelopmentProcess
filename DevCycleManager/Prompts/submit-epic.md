@@ -100,6 +100,12 @@ Format: `EPIC-XXX-slug`. Example: `EPIC-001-reporting-dashboard`
 
 ## Phase 3: Generate EpicDescription.md
 
+Apply the shared Specification Level Policy. Write an intent and decomposition
+contract: users, outcomes, business rules, boundaries and verifiable workflow
+success. Include technical detail only when it is an approved shared constraint
+or an existing decision whose context must be retained. Label proposals clearly;
+assign remaining design to feature refinement rather than inventing mechanisms.
+
 Create in `{MEMORY_BANK_PATH}/Features/00_EPICS/{folder}/EpicDescription.md`:
 
 ```markdown
@@ -126,15 +132,25 @@ Create in `{MEMORY_BANK_PATH}/Features/00_EPICS/{folder}/EpicDescription.md`:
 - [ ] {Measurable outcome 2}
 - [ ] {Measurable outcome 3}
 
+## Business Rules and Shared Constraints
+{Observable rules, failure outcomes and approved cross-feature constraints.
+Retain rationale and links to existing decisions; label unapproved proposals.}
+
+## Design Work for Feature Refinement
+{For each open design decision: named proposed feature, question to resolve,
+constraints and milestone before which it is needed. Use N/A if none is known.}
+
 ## Features Breakdown
 
 | Feature ID | Title | Status | Dependencies | Priority |
 |------------|-------|--------|--------------|----------|
-| TBD | {Suggested feature 1} | SUBMITTED | None | P1 |
-| TBD | {Suggested feature 2} | SUBMITTED | TBD | P1 |
-| TBD | {Suggested feature 3} | SUBMITTED | TBD | P2 |
+| TBD | {Suggested feature 1} | PROPOSED | None | P1 |
+| TBD | {Suggested feature 2} | PROPOSED | TBD | P1 |
+| TBD | {Suggested feature 3} | PROPOSED | TBD | P2 |
 
-> Feature IDs assigned when created via `submit-feature`. Use `deep-dive` to refine.
+> PROPOSED entries are planning slices, not submitted FEAT records. Feature IDs
+> and SUBMITTED status are assigned when created via `submit-feature`. Use
+> `deep-dive` to refine intent and boundaries.
 
 ## Epic Progress
 

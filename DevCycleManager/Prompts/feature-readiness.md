@@ -60,6 +60,16 @@ coverage; do not accept missing planning as a zero forecast. GitHub sync can be
 disabled or pending independently of local readiness; never claim a remote update
 succeeded merely because this gate passed.
 
+R6 distinguishes revisable PR estimates from explicit user hard limits. Require
+each boundary's purpose, tasks, affected consumers, dependencies, tests/docs and
+safe resulting tree, plus publication at its own gates and the planned stack
+bases. A phase can own zero, one or several units. Final reconciliation must not
+hold earlier completed units or add an aggregate PR. Reconcile revised parent
+EPIC totals and superseded-unit mappings without counting historical units twice.
+Assess per-commit feasibility separately: identify the exact blocked unit/task,
+limit and evidence, evaluate independent work, and name any feature-wide readiness
+gate that prevents it. Smaller PRs neither solve commit staging nor waive R1–R6.
+
 1. Resolve technical omissions, document choices, and repair formatting or
    missing tracking templates within the existing scope.
 2. Re-read the resulting documents and run every check above against the final

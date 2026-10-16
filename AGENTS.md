@@ -27,3 +27,10 @@ At every acceptance boundary, assess meaningful behavioral coverage against agre
 criteria: sufficient evidence, important behavior and remaining gaps. Inspect real
 assertions and boundaries; percentages/counts are diagnostic signals, not proof.
 Apply this during Task/Phase/FEAT/EPIC acceptance as well as bug repair.
+
+Before EPIC/FEAT authoring or recipe changes, read the shared
+[Specification Level Policy](docs/specification-level-policy.md). Keep EPIC intent
+and decomposition readiness distinct from FEAT implementation readiness. Preserve
+approved context and existing rich EPICs. Maintain the canonical prompt and its
+injection tests, including hosted interviews and synchronization; do not duplicate
+the full policy in project instructions.

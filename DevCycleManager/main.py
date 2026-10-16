@@ -51,6 +51,8 @@ DEEP_DIVE_RESPONSE_MODES = ("adaptive_interview", "question_manifest")
 FEATURE_WORKFLOW_MODES = ("autonomous", "single_phase")
 ACCEPTANCE_POLICY_VERSION = "acceptance-responsibility/v1"
 ACCEPTANCE_POLICY_TOOLS = frozenset(("submit-epic", "submit-feature", "create-epic-features", "link-feature-to-epic", "design-feature", "deep-dive", "refine-feature", "start-feature", "continue-implementation", "code-review", "accept-phase", "complete-feature"))
+SPECIFICATION_POLICY_VERSION = "devcycle-specification-levels/v1"
+SPECIFICATION_POLICY_TOOLS = ACCEPTANCE_POLICY_TOOLS | frozenset(GITHUB_SYNC_COMMANDS)
 QUALITY_GATE_POLICY_VERSION = "devcycle-phase-quality/v2"
 FEATURE_PHASE_POLICY_VERSION = "devcycle-feature-phases/v1"
 QUALITY_GATE_TOOLS = frozenset(("refine-feature", "start-feature", "continue-implementation",
@@ -894,6 +896,14 @@ def enrich_execution_contract(result: dict, tool_name: str) -> dict:
                 raise ValueError("Acceptance responsibility policy version is missing or incompatible")
             result["acceptance_policy_version"] = ACCEPTANCE_POLICY_VERSION
             result["instructions"] = acceptance_policy + "\n\n---\n\n" + result["instructions"]
+        if tool_name in SPECIFICATION_POLICY_TOOLS:
+            specification_policy = (PROMPTS_DIR / "specification-level-policy.md").read_text(encoding="utf-8")
+            if SPECIFICATION_POLICY_VERSION not in specification_policy:
+                raise ValueError("Specification level policy version is missing or incompatible")
+            result["specification_level_policy_version"] = SPECIFICATION_POLICY_VERSION
+            # Includes hosted interviews: guidance cannot expand their mutation
+            # authority, host stages or exact response schemas.
+            result["instructions"] += "\n\n---\n\n" + specification_policy
         # This is a successful tool call that returns a recipe for client-side execution.
         result.setdefault("tool_call_success", True)
         result.setdefault("execution_owner", "client_llm")
@@ -923,7 +933,7 @@ async def json_rpc_handler(request: JsonRpcRequest):
     if request.method == "initialize":
         return JsonRpcResponse(id=request.id, result={
             "protocolVersion": "2024-11-05",
-            "serverInfo": {"name": "DevCycleManager", "version": "0.3.0-remote"},
+            "serverInfo": {"name": "DevCycleManager", "version": "0.3.1-remote"},
             "capabilities": {"tools": {"listChanged": False}}
         })
 

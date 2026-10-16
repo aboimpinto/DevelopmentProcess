@@ -97,6 +97,9 @@ This procedure is DONE when:
 - [ ] `FeatureTasks.md` created with phase summary, tech stack, build config
 - [ ] Project policy resolved; PRDelivery.md covers tasks, candidate units and dependencies
 - [ ] Non-feature delivery has proposed PR titles/descriptions and per-phase/total counts, with no double counting; forecast assumptions recorded
+- [ ] Earlier PR estimates distinguished from explicit hard limits; each boundary explains tasks, consumers, dependencies, tests/docs and safe resulting tree
+- [ ] Unit publication/stack continuation planned independently of final reconciliation; commit-staging blockers scoped without waiving readiness
+- [ ] Revised feature and parent EPIC forecasts reconciled with superseded-unit history and configured synchronization
 - [ ] After local readiness succeeds, configured sync-feature executed or SYNC_PENDING reported separately
 - [ ] Shared readiness gate R1–R6 passed; evidence saved in `readiness-validation.md`
 - [ ] Feature moved from `01_SUBMITTED` to `02_READY_TO_DEVELOP`
@@ -159,6 +162,15 @@ Instructions:
 - Treat feature-level acceptance documents as first-class planning inputs, not optional afterthoughts.
 
 ### 1.3 Read Parent Epic and Related Feature Context (If Linked)
+
+Apply the shared Specification Level Policy. Resolve design work assigned to this
+feature against parent business rules, criteria and approved shared constraints.
+An EPIC need not contain the feature's implementation design. Retain decision
+rationale and source links; do not silently promote proposals to constraints.
+Record detailed mechanisms in the feature/phase or existing linked design record,
+within the procedure's authorized scope. Update the parent with concise outcomes,
+changed shared boundaries and traceability, not a copy of the implementation plan.
+
 
 Check the `Parent Epic` field in `FeatureDescription.md`.
 
@@ -380,6 +392,9 @@ Phase-planning requirements:
 **Depends On**: [Actual prerequisite phase IDs; do not infer from N-1]
 **PR Boundary**: undecided
 **PR Decision Basis**: [Candidate grouping and PRDelivery.md reference; evaluate at entry]
+**PR Forecast**: [Zero, one or several; owned unit IDs/count and cross-phase references without double counting]
+**Publication / Continuation**: [Each unit's gates; next separate branch from published PR-stamped predecessor head and PR base, or explicit merged-prerequisite rule]
+**Commit Feasibility**: [Limits/staging per unit; exact blocker, independent work and applicable feature-wide readiness gate]
 **Estimated Time (Man/Hour)**: [X]h
 **Estimated Time (AI/Hour)**: [Y]h
 **Actual Time (Man/Hour)**: -
@@ -398,7 +413,8 @@ Phase-planning requirements:
 - [ ] Declared prerequisite phases/tasks completed
 - [ ] Required entry evidence verified using declared check IDs
 - [ ] Baseline is green before Planning or feature implementation; the Initial Checkpoint itself produces that evidence
-- [ ] No unresolved blockers
+- [ ] No unresolved blocker of this work or applicable feature-wide readiness/start gate; identify exact unit and reason
+- [ ] Required predecessor code inherited and verified; under stacked delivery an unmerged predecessor alone is not a blocker
 
 ---
 
@@ -739,6 +755,26 @@ Use real estimates and links; this row is a template, not a fixed phase list:
 
 ---
 
+## PR Forecast and Boundaries
+
+**Delivery Plan**: [PRDelivery.md](PRDelivery.md)
+**Earlier Estimate / Revision**: [Prior forecast, revised forecast, date and reason; approval of scope is not a numeric cap]
+**Explicit Hard Limit**: [Only if actually required by the user: exact source, limit and scope; otherwise none]
+
+| Phase | Actual work and boundary rationale | Owned unit IDs / proposed titles | Estimated PR count | Dependencies |
+| --- | --- | --- | --- | --- |
+| [Actual ID] | [Task/group reasoning, or no repository diff] | [Active units; cross-phase references counted elsewhere] | [Zero, one or several] | [Predecessors] |
+
+**Feature Total / Unopened / Actual PRs**: [Distinct active units / unopened units / observed PRs, excluding superseded history]
+**Parent EPIC Forecast**: [Recomputed total; preserve sibling forecasts and link old-to-new unit mappings]
+**Boundary Explanations**: [Link each unit's purpose, tasks, affected consumers, dependencies, required tests/docs and safe resulting tree in PRDelivery.md]
+**Publication Sequence**: [Publish each unit at its own gates; child starts on a separate branch from the predecessor's published, PR-stamped head and targets that branch]
+**Final Checkpoint**: [Fresh integrated verification and delivery reconciliation; no delayed earlier publication or extra aggregate PR]
+**Commit Feasibility / Blockers**: [Unit/task and violated limit; independent-work assessment; explain any feature-wide readiness block]
+**Synchronization**: [Feature and parent updates verified / disabled / SYNC_PENDING with reason; no invented remote results]
+
+---
+
 ## Key Files to Create/Modify
 
 | File / Old → New Path | Action | Owning Phase/Task |
@@ -786,6 +822,50 @@ context. Link it from FeatureTasks.md and planning-analysis-report.md. Move
 breaking contract changes alongside affected consumers/tests, or plan compatible
 stages. Finalize each phase's grouping at entry from its properties and actual
 work; do not bake named phase exceptions into project settings.
+
+Treat earlier EPIC/FEAT PR counts as revisable estimates, including counts in an
+approved functional plan. Preserve an explicit user hard limit, recording its
+authority separately. Prefer small task-level or coherent task-group PRs; each
+phase may produce zero, one or several. Group across phases only for a concrete
+compatibility or cohesion reason. Explain every boundary using the delivery
+policy's boundary record, including its safe resulting tree after prerequisites.
+Plan publication at each unit's own gates and normal stacked continuation while
+earlier PRs await review. Keep per-commit feasibility and feature readiness separate
+from PR grouping. Reconcile all forecasts and superseded identities even when the
+refinement remains BLOCKED; do not claim implementation or a READY transition.
+
+### Regression example: PEX-Prod FEAT-003
+
+This example comes from Enzian-Labs/pex-prod, not DevCycle's own feature inventory.
+It illustrates decisions from actual work, not fixed rules for phase numbers.
+An earlier four-PR EPIC estimate does not cap refinement. For the described work,
+expect these three justified stacked units:
+
+| Phase | Unit | Included tasks / purpose | Affected consumers, tests/docs and safe resulting tree | Predecessor | PR count |
+| --- | --- | --- | --- | --- | --- |
+| P0 | none | Initial baseline evidence | No repository diff; retain evidence | none | 0 |
+| P1 | none | External planning records | No repository diff; retain task/criterion links | none | 0 |
+| P2 | E004-PR01A | F003-T21: nested boundary enforcement and tests | Existing flat tree remains supported; nested ownership and denial assertions, exact rules/docs; no broader permissions or relocation | none | 1 |
+| P3 | E004-PR01B | F003-T31: database contract relocation | Move contracts with all affected DB importers, rules/docs and required tests; SQLite still works at its old location | E004-PR01A | 1 |
+| P4 | E004-PR01C | F003-T41 and source changes from F003-T42: SQLite relocation | Move adapter with all affected consumers, rules/docs and tests; retained-state compatibility checks prove the complete cutover | E004-PR01B | 1 |
+| P5 | none | Final integrated checks and delivery reconciliation | Evidence only; reconcile existing PRs, no aggregate PR | E004-PR01A/B/C | 0 |
+
+No-diff evidence tasks (including F003-T22 baseline capture before relocation)
+retain their task/dependency links without another PR. Required tests/docs ship
+with their unit. Total: three active units; superseded E004-PR01 remains history
+and is not a fourth unit. With the three unchanged sibling forecasts, the parent
+EPIC forecast becomes six; update configured feature and EPIC synchronization.
+
+After A's own gates pass, publish A. Branch B from A's published, PR-stamped head
+and target A's branch; after B publication, do the same for C. Verify inherited
+code; no predecessor merge is required before dependent implementation. Restack
+after predecessor changes, revalidate affected evidence and merge bottom-up under
+existing review/CI/merge requirements. Publication does not wait for P5.
+
+F003-B01 concerns C's SQLite commit staging under the per-commit limits. Splitting
+PRs does not solve it or authorize temporary compatibility forwarders. Assess
+independent P2/P3 work separately, but retain the recorded feature-wide R6 readiness
+block until lawfully resolved. This example grants no READY/start or gate waiver.
 
 ## Phase 4.5: Validate the Completed Refinement
 
@@ -860,6 +940,12 @@ design decisions without displaying outdated progress as current information.
 If evidence cannot resolve a conflict, identify it and do not claim consistency.
 Record this readback result in the refinement report. A second run must update
 the same views without duplicating history or resetting sibling states.
+Recompute parent EPIC PR totals from the revised distinct active feature/unit
+records, even on blocked refinement. Preserve superseded mappings and sibling
+forecasts; reconcile FeatureDescription.md, FeatureTasks.md, phase records and
+PRDelivery.md first. Execute configured feature and parent forecast synchronization
+under the GitHub synchronization policy, recording disabled or SYNC_PENDING when
+appropriate. Synchronization never promotes a blocked feature to READY.
 
 ---
 

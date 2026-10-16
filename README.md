@@ -243,7 +243,8 @@ contract/runtime risk and required validation. Record the chosen task, grouped,
 phase or permitted feature boundary and rationale. No phase name/number selects
 a PR boundary. Evidence-only work can use `PR Boundary: none` with a reason.
 
-Delivery adds only `PR Boundary` and `PR Decision Basis` to phase records. Reuse
+Phase records include `PR Boundary`, `PR Decision Basis`, `PR Forecast`,
+`Publication / Continuation` and `Commit Feasibility`, linked to PRDelivery.md. Reuse
 existing scope and gate decisions (`needCodeReview` / `needTestCoverage` when
 present and the applicable scope policy). This capability leaves phase numbering
 and phase-level gate selection in place. Task grouping does not waive required
@@ -319,6 +320,25 @@ proposed PR titles, short descriptions, task membership and dependencies. A unit
 spanning phases counts once; evidence-only work produces zero PRs. Record a feature
 total, unopened remainder and uncertainty; revise with reasons at phase entry.
 Feature-level delivery records one unit unless there is no repository change.
+
+Earlier estimates and approval of functional scope do not set a maximum PR count.
+Preserve explicit user hard limits separately. Prefer small task or coherent
+task-group PRs; a phase can produce zero, one or several, and cross-phase grouping
+needs a concrete compatibility or cohesion reason. Each boundary explains its
+purpose, tasks, affected consumers, dependencies, required tests/docs and why its
+resulting tree is safe after prerequisites. Stacking is the normal option for
+dependent units unless explicit policy requires prior merges. Final checkpoints
+reconcile integrated verification and delivery, without holding earlier publication
+or adding an aggregate PR. Per-commit limits and all readiness/quality gates remain.
+
+The [RefineFeature regression example](DevCycleManager/Prompts/refine-feature.md#regression-example-pex-prod-feat-003)
+uses PEX-Prod FEAT-003: nested enforcement, DB contract relocation and SQLite
+relocation form three justified stacked units; evidence-only checkpoints produce
+zero PRs. The SQLite commit-staging problem remains scoped to its unit, with the
+existing feature-wide readiness block explained separately. The old aggregate is
+historical; feature and EPIC forecasts become three and six with unchanged sibling
+estimates. Revised records and configured GitHub synchronization preserve that
+history and task traceability without double counting.
 
 For example, a phase can have PRU-01 “Retain publication state” and PRU-02 “Publish
 committed references”, followed by a no-diff checkpoint with zero PRs. The total is
@@ -535,3 +555,17 @@ Procedures live in `DevCycleManager/Prompts/deep-dive-host/`. Run
 installed, or mount that directory into the project's built image at `/app` and
 run `python -m unittest discover` there. No paid model or production workflow is
 required for these contract checks.
+
+## EPIC intent and feature design
+
+The [Specification Level Policy](docs/specification-level-policy.md) defines what
+belongs at each planning level. EPICs establish intent, business rules, workflow
+acceptance and feature boundaries; FEAT refinement resolves implementation design.
+Approved constraints and traceability survive decomposition and later updates.
+Existing detailed EPICs are preserved.
+
+Planning, delivery and synchronization recipes return the canonical policy with
+`specification_level_policy_version: devcycle-specification-levels/v1`, including
+hosted Deep-Dive stages without expanding their authority or output schemas. A
+missing or incompatible policy fails recipe delivery. The server still returns
+instructions for client execution; it does not rewrite project documents itself.
